@@ -1,0 +1,82 @@
+import { Button, Switch, LineEdit, TextEdit } from "std-widgets.slint";
+import {
+    SwitchWithLabel,
+    WithLabel,
+} from "../components/labelled_things.slint";
+
+@rust-attr(derive(serde::Serialize, serde::Deserialize)] #[serde(default))
+struct SettingsInner {
+      autostart: bool,
+      cron: bool,
+}
+
+export global Settings {
+    in-out property <SettingsInner> settings;
+    pure callback settings-save();
+    pure callback settings-load();
+}
+
+export component SettingsPage inherits Rectangle {
+    VerticalLayout {
+        alignment: start;
+        Text {
+            font-size: 24px;
+            text: "设置";
+        }
+
+        VerticalLayout {
+            alignment: start;
+            preferred-height: 9999px;
+            padding-top: 24px;
+            spacing: 8px;
+            Text {
+                font-size: 18px;
+                text: "基础";
+            }
+
+            SwitchWithLabel {
+                text: "开机启动";
+                checked: Settings.settings.autostart;
+                toggled => {
+                    Settings.settings.autostart = self.checked;
+                }
+            }
+
+            SwitchWithLabel {
+                text: "启用计划任务";
+                checked: Settings.settings.cron;
+                toggled => {
+                    Settings.settings.cron = self.checked;
+                }
+            }
+
+            // WithLabel {
+            //     text: "存档路径";
+            //     TextEdit {
+            //         min-width: 160px;
+            //         min-height: 200px;
+            //     }
+            // }
+            Text {
+                font-size: 18px;
+                text: "高级";
+            }
+
+            WithLabel {
+                text: "启用API";
+            }
+        }
+
+        HorizontalLayout {
+            max-height: 12px;
+            alignment: end;
+            Button {
+                primary: true;
+                text: "保存";
+                clicked => {
+                    Settings.settings-save()
+                }
+            }
+        }
+    }
+}

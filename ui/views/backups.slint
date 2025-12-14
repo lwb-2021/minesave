@@ -1,0 +1,17 @@
+import { SaveCard } from "../components/cards.slint";
+import { ListView } from "std-widgets.slint";
+import { Backups } from "../logic/backups.slint";
+
+export component BackupsPage inherits Rectangle {
+    // GridLayout {
+    //     spacing: 8px;
+    // }
+    // TODO: change this to GridLayout when 'for' is supported in grid layouts
+    // https://github.com/slint-ui/slint/pull/10263
+   ListView {
+        for item in Backups.backups: SaveCard {
+            id: item.id;
+            name: item.name;
+        }
+    }
+}

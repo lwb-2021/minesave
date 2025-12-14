@@ -1,0 +1,24 @@
+import { Switch } from "std-widgets.slint";
+export component WithLabel inherits HorizontalLayout {
+    in property <string> text;
+
+    alignment: start;
+    spacing: 8px;
+
+    Text {
+        text: text;
+        min-width: 96px;
+        max-width: 96px;
+    }
+
+    @children
+}
+
+export component SwitchWithLabel inherits WithLabel {
+    in-out property <bool> checked;
+    callback toggled();
+    Switch {
+        checked <=> checked;
+        toggled => toggled();
+    }
+}

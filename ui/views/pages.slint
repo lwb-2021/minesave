@@ -1,0 +1,29 @@
+import { SettingsPage } from "settings.slint";
+import { BackupsPage } from "backups.slint";
+import { WelcomePage } from "welcome.slint";
+export enum Pages {
+    WelcomePage,
+    SettingsPage,
+    BackupsPage
+}
+export global Router {
+    in-out property <Pages> current-page: WelcomePage;
+}
+
+export component RouterView inherits Rectangle {
+    VerticalLayout {
+        padding: 12px;
+        padding-left: 24px;
+        WelcomePage {
+            visible: Router.current-page == Pages.WelcomePage;
+        }
+
+        BackupsPage {
+            visible: Router.current-page == Pages.BackupsPage;
+        }
+
+        SettingsPage {
+            visible: Router.current-page == Pages.SettingsPage;
+        }
+    }
+}

@@ -1,0 +1,28 @@
+import { SideBar } from "sidebar.slint";
+import { RouterView } from "views/pages.slint";
+import { Palette } from "std-widgets.slint";
+import { Settings } from "views/settings.slint";
+import { Backups } from "logic/backups.slint";
+import { Tasks } from "logic/status.slint";
+export component Main inherits Window {
+    default-font-family: "Source Sans CN";
+    default-font-size: 14px;
+    init => {
+        Settings.settings-load();
+    }
+    background: Palette.background;
+    HorizontalLayout {
+        alignment: start;
+        bar := SideBar {
+            background: Palette.alternate-background;
+        }
+
+        view := RouterView {
+            preferred-width: 9999px;
+            preferred-height: 9999px;
+            background: Palette.background;
+        }
+    }
+}
+
+export { Settings, Backups, Tasks  }

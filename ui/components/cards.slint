@@ -1,0 +1,45 @@
+import { Palette, Button } from "std-widgets.slint";
+import { Backups } from "../logic/backups.slint";
+export component Card inherits Rectangle {
+    border-radius: 12px;
+    preferred-width: 400px;
+    preferred-height: 100px;
+    background: Palette.alternate-background;
+    @children
+}
+
+export component SaveCard inherits Card {
+    in property <string> id;
+    in property <string> name;
+    in property <string> description;
+    VerticalLayout {
+        padding: 8px;
+        spacing: 4px;
+        Text {
+            text: name;
+            font-size: 24px;
+        }
+
+        Text {
+            text: description;
+        }
+
+        HorizontalLayout {
+            spacing: 4px;
+            alignment: end;
+            Button {
+                icon: @image-url("../icon/backup.png");
+                colorize-icon: true;
+                clicked => {
+                    Backups.run-backup(id, name, 255);
+                }
+            }
+
+            Button {
+                text: "详细信息(正在开发)";
+                clicked => {
+                }
+            }
+        }
+    }
+}

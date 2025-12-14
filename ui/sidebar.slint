@@ -1,0 +1,44 @@
+import { Button, Palette } from "std-widgets.slint";
+import { Pages, Router } from "views/pages.slint";
+export component SideBar inherits Rectangle {
+    VerticalLayout {
+        min-width: 40px;
+        padding: 8px;
+        padding-top: 16px;
+        VerticalLayout {
+            alignment: start;
+            spacing: 8px;
+            Button {
+                colorize-icon: true;
+                icon: @image-url("icon/backup.png");
+                clicked => {
+                    Router.current-page = Pages.BackupsPage;
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: end;
+            spacing: 8px;
+            Button {
+                icon: Palette.color-scheme == ColorScheme.light ? @image-url("icon/dark.png") : @image-url("icon/light.png");
+                colorize-icon: true;
+                clicked => {
+                    if (Palette.color-scheme == ColorScheme.light) {
+                        Palette.color-scheme = ColorScheme.dark
+                    } else {
+                        Palette.color-scheme = ColorScheme.light
+                    }
+                }
+            }
+
+            Button {
+                icon: @image-url("icon/settings.png");
+                colorize-icon: true;
+                clicked => {
+                    Router.current-page = Pages.SettingsPage;
+                }
+            }
+        }
+    }
+}

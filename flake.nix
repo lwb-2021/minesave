@@ -24,12 +24,23 @@
         rustToolchain = pkgs.rust-bin.nightly.latest.default.override {
           extensions = [
             "rust-src"
+            "rust-std"
             "rust-analyzer"
             "rustfmt"
           ];
         };
         nativeDeps = with pkgs; [
           libgcc.libgcc
+
+          libGL
+          wayland
+          libxkbcommon
+          xorg.libX11
+          xorg.libXcursor
+          xorg.libXi
+          xorg.libXrandr
+
+          fontconfig
         ];
 
       in
@@ -39,6 +50,7 @@
             rustToolchain
             pkgs.pkg-config
 
+            # pkgs.rustfmt
           ]
           ++ nativeDeps;
 
@@ -49,32 +61,35 @@
           '';
         };
 
-        packages.default =
-          (pkgs.makeRustPlatform {
-            cargo = rustToolchain;
-            rustc = rustToolchain;
-          }).buildRustPackage
-            rec {
-              pname = "${name}";
-              version = "0.1.0";
+        packages = rec {
+          minesave =
+            (pkgs.makeRustPlatform {
+              cargo = rustToolchain;
+              rustc = rustToolchain;
+            }).buildRustPackage
+              rec {
+                pname = "${name}";
+                version = "0.1.0";
 
-              src = ./.;
+                src = ./.;
 
-              cargoLock.lockFile = src + /Cargo.lock;
+                cargoLock.lockFile = src + /Cargo.lock;
 
-              cargoSha256 = nixpkgs.lib.fakeSha256;
-              nativeBuildInputs = with pkgs; [
-                pkg-config
+                cargoSha256 = nixpkgs.lib.fakeSha256;
+                nativeBuildInputs = with pkgs; [
+                  pkg-config
 
-                makeWrapper
-              ];
-              buildInputs = nativeDeps;
-              RUSTFLAGS = "--cfg=web_sys_unstable_apis";
+                  makeWrapper
+                ];
+                buildInputs = nativeDeps;
+                RUSTFLAGS = "--cfg=web_sys_unstable_apis";
 
-              postInstall = ''
-                wrapProgram "$out/bin/${name}" --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath nativeDeps}"
-              '';
-            };
+                postInstall = ''
+                  wrapProgram "$out/bin/${name}" --prefix LD_LIBRARY_PATH : "${pkgs.lib.makeLibraryPath nativeDeps}"
+                '';
+              };
+          default = minesave;
+        };
 
         apps.default = {
           type = "app";
