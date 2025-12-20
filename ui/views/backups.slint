@@ -8,7 +8,8 @@ export component BackupsPage inherits Rectangle {
     // }
     // TODO: change this to GridLayout when 'for' is supported in grid layouts
     // https://github.com/slint-ui/slint/pull/10263
-   ListView {
+    ListView {
+        height: 600px;
         for item in Backups.backups: SaveCard {
             id: item.id;
             name: item.name;

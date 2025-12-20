@@ -1,4 +1,5 @@
 use anyhow::Result;
+use log::error;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
 use std::{fs::File, rc::Rc, vec};
 
@@ -84,13 +85,19 @@ fn register(app: &Main) {
             if let Some(version) = &item.latest_version {
                 let mut p = version;
                 versions.push(MinecraftSaveVersionMeta {
-                    r#type: unsafe { std::mem::transmute_copy(&p.version_type) },
+                    r#type: unsafe {
+                        let version_type: u8 = std::mem::transmute_copy(&p.version_type);
+                        version_type as i32
+                    },
                     description: p.description.to_shared_string(),
                 });
                 while let Some(version) = &p.prev {
                     p = version;
                     versions.push(MinecraftSaveVersionMeta {
-                        r#type: unsafe { std::mem::transmute_copy(&version.version_type) },
+                        r#type: unsafe {
+                            let version_type: u8 = std::mem::transmute_copy(&version.version_type);
+                            version_type as i32
+                        },
                         description: version.description.to_shared_string(),
                     });
                 }
@@ -131,6 +138,7 @@ fn spawn_task(app: &Main, name: String, action: Action, payload: Vec<String>) {
     let status: &VecModel<i32> = status.as_any().downcast_ref().unwrap();
     let results: &VecModel<SharedString> = results.as_any().downcast_ref().unwrap();
 
+    let name_move = name.clone();
     let result = slint::spawn_local(async move {
         let result =
             tokio::spawn(async move { api::handle_request(ApiData { action, payload }).await })
@@ -145,6 +153,7 @@ fn spawn_task(app: &Main, name: String, action: Action, payload: Vec<String>) {
 
             status.remove(status.iter().len() - 1);
             if let Err(err) = result {
+                error!("Task {:?}: {:?}", name_move, err);
                 status.push(1);
                 results.push(slint::format!("{}", err));
             } else {

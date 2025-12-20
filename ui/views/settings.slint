@@ -8,6 +8,7 @@ import {
 struct SettingsInner {
       autostart: bool,
       cron: bool,
+sync: bool,
 }
 
 export global Settings {
@@ -59,10 +60,23 @@ export component SettingsPage inherits Rectangle {
             // }
             Text {
                 font-size: 18px;
+                text: "同步(TODO)";
+            }
+
+            SwitchWithLabel {
+                text: "启用云同步";
+                checked: Settings.settings.sync;
+                toggled => {
+                    Settings.settings.sync = self.checked;
+                }
+            }
+
+            Text {
+                font-size: 18px;
                 text: "高级";
             }
 
-            WithLabel {
+            SwitchWithLabel {
                 text: "启用API";
             }
         }

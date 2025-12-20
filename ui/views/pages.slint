@@ -14,16 +14,10 @@ export component RouterView inherits Rectangle {
     VerticalLayout {
         padding: 12px;
         padding-left: 24px;
-        WelcomePage {
-            visible: Router.current-page == Pages.WelcomePage;
-        }
+        alignment: stretch;
+        if Router.current-page == Pages.WelcomePage: WelcomePage { }
 
-        BackupsPage {
-            visible: Router.current-page == Pages.BackupsPage;
-        }
-
-        SettingsPage {
-            visible: Router.current-page == Pages.SettingsPage;
-        }
+        if Router.current-page == Pages.BackupsPage: BackupsPage { }
+        if Router.current-page == Pages.SettingsPage: SettingsPage { }
     }
 }

@@ -8,19 +8,21 @@ mod slint_api;
 use crate::backup::MinecraftSaveCollection;
 use anyhow::Result;
 use clap::Parser;
+use env_logger::Env;
+use log::warn;
 use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    env_logger::init_from_env(Env::new().filter_or("RUST_LOG", "minesave=info"));
     let parameters = cmd::Cli::parse();
     create_dirs()?;
-
     {
         let save_collection = MinecraftSaveCollection::global();
         let mut save_collection = save_collection.lock().unwrap();
         if let Err(err) = save_collection.load() {
-            eprintln!(
-                "Warning: Failed to load save information, using default one:\n{}",
+            warn!(
+                "Failed to load save information, using default one:\n{}",
                 err
             );
             *save_collection = MinecraftSaveCollection::default();
@@ -47,6 +49,7 @@ fn create_dirs() -> Result<()> {
 }
 
 async fn start_daemon_server() -> Result<()> {
-    tokio::spawn(async {});
+    tokio::spawn(async {}).await?;
+    log::info!("daemon started");
     Ok(())
 }

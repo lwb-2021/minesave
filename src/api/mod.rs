@@ -4,10 +4,11 @@ use std::io::Write;
 
 use crate::{
     backup::{
-        MinecraftSave, MinecraftSaveCollection, MinecraftSaveVersion, MinecraftSaveVersionType,
+        MinecraftSaveCollection, MinecraftSaveVersion,
     },
     error::{MyError, Result},
 };
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
 #[repr(u8)]
@@ -25,10 +26,8 @@ pub struct ApiData {
 
 pub fn write_api_help<W: Write>(stream: &mut W) -> Result<()> {
     writeln!(stream, "MineSave API help")?;
-    writeln!(
-        stream,
-        "Json & Plain text(split arguments with &, use '\\&' to replace '&') are supported"
-    )?;
+    writeln!(stream, "Json & Command are supported")?;
+    writeln!(stream, "Command example: backup --filter=\"New World\"")?;
     writeln!(
         stream,
         "List: action_id=0, [filter=<regex applied to name>] -> Result<[{{name: string, versions: [{{type: int, description: string}}]}}]>"
@@ -41,7 +40,7 @@ pub fn write_api_help<W: Write>(stream: &mut W) -> Result<()> {
 }
 
 pub async fn handle_request(data: ApiData) -> Result<()> {
-    println!("Request received: {:?}", data);
+    debug!("request received: {:?}", data);
     match data.action {
         Action::List => {
             todo!()
@@ -55,7 +54,7 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                     value: data.payload[1].to_string(),
                     expected: "int".to_string(),
                 })?;
-            println!("Backup request recognized: id={} type={}", id, t);
+            info!("backup: id={} type={}", id, t);
             let data = MinecraftSaveCollection::global().lock().unwrap().saves[&id].clone();
             let mut version = {
                 MinecraftSaveVersion::create(
@@ -66,7 +65,6 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                 )
                 .await?
             };
-
             let prev = {
                 MinecraftSaveCollection::global()
                     .lock()
@@ -77,7 +75,9 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                     .latest_version
                     .take()
             };
-            version.prev = prev.map(Box::new);
+            if prev.is_some() {
+                version.prev = prev.map(Box::new);
+            }
             MinecraftSaveCollection::global()
                 .lock()
                 .unwrap()
@@ -85,9 +85,11 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                 .get_mut(&id)
                 .unwrap()
                 .latest_version = Some(version);
+            MinecraftSaveCollection::global().lock().unwrap().save()?;
         }
         #[allow(unreachable_patterns)]
         i => {
+            error!("Unexpected request {:?}", data);
             return Err(MyError::IllegalArgument {
                 name: "action_id".to_string(),
                 value: format!("{:?}", i),

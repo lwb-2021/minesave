@@ -1,24 +1,25 @@
 mod data;
+mod hash;
 mod save;
 
+use log::warn;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs::{self, File},
-    hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
     sync::{Arc, LazyLock, Mutex},
 };
 
 pub use crate::backup::save::MinecraftSave;
 pub use crate::backup::save::MinecraftSaveVersion;
-pub use crate::backup::save::MinecraftSaveVersionType;
 
 use crate::{error::Result, globals::MINESAVE_HOME};
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default)]
 pub struct MinecraftSaveCollection {
     pub scan_root: Vec<PathBuf>,
+    pub scanned_saves: Vec<PathBuf>,
     pub saves: HashMap<String, MinecraftSave>,
 }
 
@@ -35,34 +36,30 @@ impl MinecraftSaveCollection {
     pub fn refresh(&mut self) {
         for root in &self.scan_root {
             if !fs::exists(root).unwrap_or_default() {
-                eprintln!("Warning: Cannot find or read {:?}", root);
+                warn!("Cannot find or read {:?}", root);
                 continue;
             }
-            self.saves.extend(
-                walkdir::WalkDir::new(root)
-                    .into_iter()
-                    .filter_map(|x| x.ok())
-                    .filter(|x| x.path().is_dir() && x.path().join("level.dat").is_file())
-                    .map(|x| x.path().to_path_buf())
-                    .map(|path| {
-                        (
-                            hash_string(&path),
-                            MinecraftSave::create(hash_string(&path), path),
-                        )
-                    }),
-            )
+            for path in walkdir::WalkDir::new(root)
+                .into_iter()
+                .filter_map(|x| x.ok())
+                .filter(|x| x.path().is_dir() && x.path().join("level.dat").is_file())
+                .map(|x| x.path().to_path_buf())
+            {
+                if self.scanned_saves.contains(&path) {
+                    continue;
+                }
+                let id: String = uuid::Uuid::new_v4().to_string();
+                self.scanned_saves.push(path.clone());
+                self.saves
+                    .insert(id.clone(), MinecraftSave::create(id, path));
+            }
         }
         if let Err(err) = self.save() {
-            eprintln!("Warning: Failed to save saves.json: {}", err);
+            warn!("Failed to save saves.json: {}", err);
         }
     }
     pub fn save(&self) -> Result<()> {
         serde_json::to_writer_pretty(File::create(MINESAVE_HOME.join("saves.json"))?, &self)?;
         Ok(())
     }
-}
-fn hash_string(input: &PathBuf) -> String {
-    let mut hasher = DefaultHasher::new();
-    input.hash(&mut hasher);
-    hasher.finish().to_string()
 }
