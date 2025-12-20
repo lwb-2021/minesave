@@ -1,3 +1,4 @@
+#![feature(cfg_select)]
 mod api;
 mod backup;
 mod cmd;
@@ -14,7 +15,14 @@ use std::fs;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init_from_env(Env::new().filter_or("RUST_LOG", "minesave=info"));
+    let env = Env::new().filter_or(
+        "RUST_LOG",
+        cfg_select! {
+            debug_assertions => {"minesave=debug"}
+            _ => {"minesave=info"}
+        },
+    );
+    env_logger::init_from_env(env);
     let parameters = cmd::Cli::parse();
     create_dirs()?;
     {

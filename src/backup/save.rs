@@ -1,15 +1,23 @@
-use crate::{Result, backup::hash::create_full_copy_with_hash, globals::MINESAVE_HOME};
+use crate::{
+    Result,
+    backup::hash::{Sha256Sum, create_full_copy_with_hash, hash_diff},
+    globals::MINESAVE_HOME,
+};
 use anyhow::{anyhow, bail};
+use async_compression::{tokio::write::ZstdEncoder, zstd::CParameter};
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::{
+    collections::HashMap,
     env,
     path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 use tokio::{
     fs::{self, File},
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
 };
+use tokio_tar::Builder;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MinecraftSave {
@@ -50,13 +58,17 @@ impl MinecraftSaveVersion {
         source: P,
         id: String,
         description: String,
+        prev: Option<Box<MinecraftSaveVersion>>,
     ) -> Result<Self> {
         match version_type {
             MinecraftSaveVersionType::Full => {
-                Self::create_version_full(source, id, description).await
+                Self::create_version_full(source, id, description, prev).await
+            }
+            MinecraftSaveVersionType::IncreasementFile => {
+                Self::create_version_increasement_file(source, id, description, prev).await
             }
             MinecraftSaveVersionType::Default => {
-                Self::create_version_full(source, id, description).await // TODO: Considering add a config for this
+                Self::create_version_full(source, id, description, prev).await // TODO: Considering add a config for this
             }
             #[allow(unreachable_patterns)]
             _ => todo!(),
@@ -67,6 +79,7 @@ impl MinecraftSaveVersion {
         source: P,
         id: String,
         description: String,
+        prev: Option<Box<MinecraftSaveVersion>>,
     ) -> Result<Self> {
         let path = MINESAVE_HOME.join(id).join(
             std::time::UNIX_EPOCH
@@ -78,14 +91,67 @@ impl MinecraftSaveVersion {
         fs::create_dir_all(&path).await?;
         let hash = create_full_copy_with_hash(&source, &path).await?;
         let packed_hash = rmp_serde::to_vec(&hash)?;
-        let mut hash_file = File::create(&path.with_file_name("hash.dat")).await?;
-        hash_file.write_all(&packed_hash).await?;
-        // TODO: compress
+        File::create(&path.with_file_name("hash.dat"))
+            .await?
+            .write_all(&packed_hash)
+            .await?;
+        let archive = File::create(path.with_extension(".tar.zst")).await?;
+        let encoder = ZstdEncoder::with_quality_and_params(
+            archive,
+            async_compression::Level::Precise(15),
+            &[CParameter::nb_workers(1)],
+        );
+        let mut builder = Builder::new(encoder);
+        builder.append_path(&path).await?;
+        fs::remove_dir(&path).await?;
+
+        Ok(Self {
+            path: path.with_extension(".tar.zst").to_path_buf(),
+            description,
+            prev,
+            version_type: MinecraftSaveVersionType::Full,
+        })
+    }
+    async fn create_version_increasement_file<P: AsRef<Path>>(
+        source: P,
+        id: String,
+        description: String,
+        prev: Option<Box<MinecraftSaveVersion>>,
+    ) -> Result<Self> {
+        let path = MINESAVE_HOME.join(id).join(
+            std::time::UNIX_EPOCH
+                .elapsed()
+                .unwrap()
+                .as_millis()
+                .to_string(),
+        );
+        fs::create_dir_all(&path).await?;
+        let mut packed_hash = vec![];
+        File::open(&path.with_file_name("hash.dat"))
+            .await?
+            .read_to_end(&mut packed_hash)
+            .await?;
+
+        let mut hash: HashMap<PathBuf, Sha256Sum> = rmp_serde::from_slice(&packed_hash)?;
+        let new_hash = hash_diff(&source, &hash).await?;
+        for (relative, item) in new_hash {
+            debug!("change detected: {:?}", relative);
+            fs::copy(source.as_ref().join(&relative), path.join(&relative)).await?;
+            debug!("copied: {:?}", relative);
+            hash.insert(relative, item);
+        }
+
+        let packed_hash = rmp_serde::to_vec(&hash)?;
+        File::create(&path.with_file_name("hash.dat"))
+            .await?
+            .write_all(&packed_hash)
+            .await?;
+
         Ok(Self {
             path,
             description,
-            prev: None,
-            version_type: MinecraftSaveVersionType::Full,
+            prev,
+            version_type: MinecraftSaveVersionType::IncreasementFile,
         })
     }
     pub async fn merge(self, save_name: String) -> Result<Self> {
@@ -102,6 +168,7 @@ impl MinecraftSaveVersion {
             &temp,
             save_name,
             format!("Merged from {} and previous versions", self.description),
+            None,
         )
         .await
     }
@@ -131,7 +198,8 @@ impl MinecraftSaveVersion {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MinecraftSaveVersionType {
     Full = 0,
-    Increasement = 1,
-    Snapshot = 2,
+    IncreasementFile = 1,
+    IncreasementData = 2,
+    Snapshot = 3,
     Default = 255,
 }

@@ -3,9 +3,7 @@ mod tcp;
 use std::io::Write;
 
 use crate::{
-    backup::{
-        MinecraftSaveCollection, MinecraftSaveVersion,
-    },
+    backup::{MinecraftSaveCollection, MinecraftSaveVersion},
     error::{MyError, Result},
 };
 use log::{debug, error, info};
@@ -34,7 +32,11 @@ pub fn write_api_help<W: Write>(stream: &mut W) -> Result<()> {
     )?;
     writeln!(
         stream,
-        "Backup: action_id=1, id=?, type=?(0: Full, 1: Increasement, 2: Snapshot) -> Result"
+        "Backup: action_id=1, id=?, type=<backup type> -> Result"
+    )?;
+    writeln!(
+        stream,
+        "backup type: 0=Full 1=IncreasementFile 2=IncreasementData 3=Snapshot 255=Default"
     )?;
     Ok(())
 }
@@ -56,15 +58,6 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                 })?;
             info!("backup: id={} type={}", id, t);
             let data = MinecraftSaveCollection::global().lock().unwrap().saves[&id].clone();
-            let mut version = {
-                MinecraftSaveVersion::create(
-                    unsafe { std::mem::transmute_copy(&t) },
-                    data.target,
-                    data.id.to_string(),
-                    "".to_string(),
-                )
-                .await?
-            };
             let prev = {
                 MinecraftSaveCollection::global()
                     .lock()
@@ -74,10 +67,19 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
                     .unwrap()
                     .latest_version
                     .take()
+                    .map(Box::new)
             };
-            if prev.is_some() {
-                version.prev = prev.map(Box::new);
-            }
+            let version = {
+                MinecraftSaveVersion::create(
+                    unsafe { std::mem::transmute_copy(&t) },
+                    data.target,
+                    data.id.to_string(),
+                    "".to_string(),
+                    prev,
+                )
+                .await?
+            };
+
             MinecraftSaveCollection::global()
                 .lock()
                 .unwrap()

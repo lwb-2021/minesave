@@ -27,19 +27,17 @@ pub async fn create_full_copy_with_hash<P: AsRef<Path>, Q: AsRef<Path>>(
     src: P,
     dst: Q,
 ) -> Result<HashMap<PathBuf, Sha256Sum>> {
-    let src = src.as_ref();
-    let dst = dst.as_ref();
     let mut results = HashMap::new();
     let mut handles = Vec::new();
-    for entry in WalkDir::new(src) {
+    for entry in WalkDir::new(&src) {
         let entry = entry?;
         if entry.file_type().is_dir() {
             continue;
         }
         let path = entry.path();
         let src_path = path.to_path_buf();
-        let relative_path = path.strip_prefix(src).unwrap().to_path_buf();
-        let target_path = dst.join(&relative_path);
+        let relative_path = path.strip_prefix(&src).unwrap().to_path_buf();
+        let target_path = dst.as_ref().join(&relative_path);
         let parent = target_path.parent().map(|p| p.to_path_buf());
 
         let handle = tokio::spawn(async move {
@@ -63,9 +61,34 @@ pub async fn create_full_copy_with_hash<P: AsRef<Path>, Q: AsRef<Path>>(
 
     Ok(results)
 }
+pub async fn hash_diff<P: AsRef<Path>>(
+    src: P,
+    old_hash: &HashMap<PathBuf, Sha256Sum>,
+) -> Result<HashMap<PathBuf, Sha256Sum>> {
+    let mut result = HashMap::new();
+    for entry in WalkDir::new(&src) {
+        let entry = entry?;
+        if entry.file_type().is_dir() {
+            continue;
+        }
+        let path = entry.path();
+        let src_path = path.to_path_buf();
+        let relative_path = path.strip_prefix(&src).unwrap().to_path_buf();
+        let new_hash = hash(&src_path).await?;
+
+        if let Some(old) = old_hash.get(&relative_path)
+            && old == &new_hash
+        {
+            continue;
+        }
+
+        result.insert(relative_path, new_hash);
+    }
+
+    Ok(result)
+}
 pub async fn hash<P: AsRef<Path>>(src: P) -> Result<Sha256Sum> {
-    let src = src.as_ref();
-    let mut src_file = File::open(src).await?;
+    let mut src_file = File::open(&src).await?;
     let mut context = ring::digest::Context::new(&SHA256);
 
     let mut buffer = vec![0u8; 8192];
