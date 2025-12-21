@@ -88,6 +88,7 @@ impl MinecraftSaveVersion {
                 .as_millis()
                 .to_string(),
         );
+        debug!("backup started");
         fs::create_dir_all(&path).await?;
         let hash = create_full_copy_with_hash(&source, &path).await?;
         let packed_hash = rmp_serde::to_vec(&hash)?;
@@ -95,18 +96,18 @@ impl MinecraftSaveVersion {
             .await?
             .write_all(&packed_hash)
             .await?;
-        let archive = File::create(path.with_extension(".tar.zst")).await?;
-        let encoder = ZstdEncoder::with_quality_and_params(
-            archive,
-            async_compression::Level::Precise(15),
-            &[CParameter::nb_workers(1)],
-        );
+        debug!("hash created");
+        debug!("compressing: zstd level=15");
+        let archive = File::create(path.with_extension("tar.zst")).await?;
+        let encoder = ZstdEncoder::with_quality(archive, async_compression::Level::Precise(15));
         let mut builder = Builder::new(encoder);
-        builder.append_path(&path).await?;
-        fs::remove_dir(&path).await?;
+        builder.append_dir_all(".", &path).await?;
+        builder.into_inner().await?.shutdown().await?; // into_inner finishes the archive
+        debug!("compress finished");
+        fs::remove_dir_all(&path).await?;
 
         Ok(Self {
-            path: path.with_extension(".tar.zst").to_path_buf(),
+            path: path.with_extension("tar.zst").to_path_buf(),
             description,
             prev,
             version_type: MinecraftSaveVersionType::Full,

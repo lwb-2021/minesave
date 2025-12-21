@@ -6,12 +6,15 @@ mod error;
 mod globals;
 mod slint_api;
 
-use crate::backup::MinecraftSaveCollection;
-use anyhow::Result;
+use crate::{backup::MinecraftSaveCollection, error::Result};
 use clap::Parser;
 use env_logger::Env;
 use log::warn;
-use std::fs;
+use std::{fs, io::Bytes};
+use tokio::{
+    io::AsyncReadExt,
+    net::{TcpListener, TcpStream},
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -36,12 +39,14 @@ async fn main() -> Result<()> {
             *save_collection = MinecraftSaveCollection::default();
         };
     }
-    start_daemon_server().await?;
     match parameters.command {
         None | Some(cmd::Command::UI) => {
             slint_api::run_ui().unwrap();
+            start_daemon_server().await?;
         }
-        Some(cmd::Command::Daemon) => {}
+        Some(cmd::Command::Daemon) => {
+            daemon().await?;
+        }
     }
     Ok(())
 }
@@ -57,7 +62,22 @@ fn create_dirs() -> Result<()> {
 }
 
 async fn start_daemon_server() -> Result<()> {
-    tokio::spawn(async {}).await?;
+    tokio::spawn(daemon()).await?;
     log::info!("daemon started");
+    Ok(())
+}
+async fn daemon() -> Result<()> {
+    let server = TcpListener::bind("127.0.0.1:7908").await?;
+
+    loop {
+        if let Ok((mut conn, _addr)) = server.accept().await {
+            daemon_inner(&mut conn).await;
+        } else {
+            log::error!("Failed to accept connection");
+        }
+    }
+}
+#[inline]
+async fn daemon_inner(conn: &mut TcpStream) -> Result<()> {
     Ok(())
 }

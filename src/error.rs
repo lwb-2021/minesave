@@ -12,7 +12,12 @@ pub enum MyError {
     JoinError(#[from] tokio::task::JoinError),
 
     #[error(transparent)]
-    Serde(#[from] serde_json::Error),
+    SerdeJson(#[from] serde_json::Error),
+    #[error(transparent)]
+    SerdeMessagepackEncode(#[from] rmp_serde::encode::Error),
+    #[error(transparent)]
+    SerdeMessagepackDecode(#[from] rmp_serde::decode::Error),
+
     #[error("Illegal Argument {name}: got {value}, expected: {expected}")]
     IllegalArgument {
         name: String,
