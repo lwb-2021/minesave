@@ -1,12 +1,14 @@
 use anyhow::Result;
+use duct::cmd;
 use log::error;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
-use std::{fs::File, rc::Rc, vec};
+use std::{fs::File, path::PathBuf, process, rc::Rc, vec};
+use tray::{TrayIcon, TrayIconAttributes};
 
 use crate::{
     api::{self, Action, ApiData},
     backup::MinecraftSaveCollection,
-    globals::CONFIG_FILE,
+    globals::{CONFIG_FILE, MACHINE},
 };
 
 slint::include_modules!();
@@ -15,6 +17,11 @@ pub fn run_ui() -> Result<()> {
     let app = Main::new()?;
     load_settings(&app)?;
     register(&app);
+
+    let attr = TrayIconAttributes {
+        ..Default::default()
+    };
+    let icon = TrayIcon::new(attr)?;
     app.run()?;
     Ok(())
 }
@@ -110,6 +117,38 @@ fn register(app: &Main) {
         }
         backups.set_backups(ModelRc::new(VecModel::from(result)));
     });
+    app.global::<Backups>()
+        .on_add_scan_root(move |path: SharedString| {
+            MinecraftSaveCollection::global()
+                .lock()
+                .unwrap()
+                .scan_root
+                .get_mut(MACHINE.as_str())
+                .unwrap()
+                .push(PathBuf::from(path.as_str()));
+            MinecraftSaveCollection::global().lock().unwrap().refresh();
+        });
+
+    app.global::<SlintAPI>().on_directory_chooser(|| {
+        rfd::FileDialog::new()
+            .pick_folder()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_shared_string()
+    });
+    app.global::<SlintAPI>().on_rclone_version(|| {
+        cmd!("rclone", "--version")
+            .read()
+            .unwrap_or(
+                "无法找到Rclone，请确认Rclone是否安装 安装教程https://rclone.org/install"
+                    .to_string(),
+            )
+            .lines()
+            .next()
+            .unwrap()
+            .to_shared_string()
+    });
+
     app.global::<Backups>().invoke_refresh();
 }
 fn add_task_info<S: AsRef<str>>(app: &Main, name: S, status: i32, result: S) {

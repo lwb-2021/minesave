@@ -1,11 +1,11 @@
 use crate::{
     Result,
     backup::hash::{Sha256Sum, create_full_copy_with_hash, hash_diff},
-    globals::MINESAVE_HOME,
+    globals::{MACHINE, MINESAVE_HOME},
 };
-use anyhow::{anyhow, bail};
-use async_compression::{tokio::write::ZstdEncoder, zstd::CParameter};
-use log::{debug, info};
+use anyhow::anyhow;
+use async_compression::tokio::write::ZstdEncoder;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
@@ -25,7 +25,7 @@ pub struct MinecraftSave {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub target: PathBuf,
+    pub target: HashMap<String, PathBuf>,
     pub latest_version: Option<MinecraftSaveVersion>,
 }
 impl MinecraftSave {
@@ -39,7 +39,7 @@ impl MinecraftSave {
                 .to_string_lossy()
                 .to_string(),
             description: String::new(),
-            target: source.as_ref().to_path_buf(),
+            target: HashMap::from_iter([(MACHINE.clone(), source.as_ref().to_path_buf())]),
             latest_version: None,
         }
     }
@@ -68,7 +68,7 @@ impl MinecraftSaveVersion {
                 Self::create_version_increasement_file(source, id, description, prev).await
             }
             MinecraftSaveVersionType::Default => {
-                Self::create_version_full(source, id, description, prev).await // TODO: Considering add a config for this
+                Self::create_version_increasement_file(source, id, description, prev).await // TODO: Considering add a config for this
             }
             #[allow(unreachable_patterns)]
             _ => todo!(),
@@ -119,6 +119,10 @@ impl MinecraftSaveVersion {
         description: String,
         prev: Option<Box<MinecraftSaveVersion>>,
     ) -> Result<Self> {
+        if prev.is_none() {
+            return Self::create_version_full(source, id, description, prev).await;
+        }
+
         let path = MINESAVE_HOME.join(id).join(
             std::time::UNIX_EPOCH
                 .elapsed()
@@ -127,6 +131,7 @@ impl MinecraftSaveVersion {
                 .to_string(),
         );
         fs::create_dir_all(&path).await?;
+
         let mut packed_hash = vec![];
         File::open(&path.with_file_name("hash.dat"))
             .await?
@@ -190,8 +195,8 @@ impl MinecraftSaveVersion {
             .await?;
         self.recover_self(&target).await
     }
-    async fn recover_self<P: AsRef<Path>>(&self, target: P) -> Result<Self> {
-        bail!("Not implemented, {:?}", target.as_ref());
+    async fn recover_self<P: AsRef<Path>>(&self, _target: P) -> Result<Self> {
+        todo!()
     }
 }
 

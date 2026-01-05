@@ -1,18 +1,42 @@
 import { SaveCard } from "../components/cards.slint";
-import { ListView } from "std-widgets.slint";
+import { ListView, Button } from "std-widgets.slint";
 import { Backups } from "../logic/backups.slint";
+import { AddScanRootDialog } from "backups/add_scan_root.slint";
 
 export component BackupsPage inherits Rectangle {
-    // GridLayout {
-    //     spacing: 8px;
-    // }
-    // TODO: change this to GridLayout when 'for' is supported in grid layouts
-    // https://github.com/slint-ui/slint/pull/10263
-    ListView {
-        height: 600px;
-        for item in Backups.backups: SaveCard {
-            id: item.id;
-            name: item.name;
+    property <bool> dialog-show: false;
+    VerticalLayout {
+        alignment: start;
+        HorizontalLayout {
+            alignment: stretch;
+            Text {
+                text: "备份";
+                font-size: 24px;
+            }
+
+            Button {
+                text: "增加扫描路径";
+                max-width: 24px;
+                clicked => {
+                    dialog-show = true
+                }
+            }
         }
+        // GridLayout {
+        //     spacing: 8px;
+        // }
+        // TODO: change this to GridLayout when 'for' is supported in grid layouts
+        // https://github.com/slint-ui/slint/pull/10263
+        ListView {
+            height: 600px;
+            for item in Backups.backups: SaveCard {
+                id: item.id;
+                name: item.name;
+            }
+        }
+    }
+
+    AddScanRootDialog {
+        visible <=> parent.dialog-show;
     }
 }

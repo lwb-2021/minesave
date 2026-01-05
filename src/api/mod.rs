@@ -5,6 +5,7 @@ use std::io::Write;
 use crate::{
     backup::{MinecraftSaveCollection, MinecraftSaveVersion},
     error::{MyError, Result},
+    globals::MACHINE,
 };
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
@@ -47,57 +48,63 @@ pub async fn handle_request(data: ApiData) -> Result<()> {
         Action::List => {
             todo!()
         }
-        Action::Backup => {
-            let id: String = data.payload[0].clone();
-            let t: u8 = data.payload[1]
-                .parse()
-                .map_err(|_| MyError::IllegalArgument {
-                    name: "type".to_string(),
-                    value: data.payload[1].to_string(),
-                    expected: "int".to_string(),
-                })?;
-            info!("backup: id={} type={}", id, t);
-            let data = MinecraftSaveCollection::global().lock().unwrap().saves[&id].clone();
-            let prev = {
-                MinecraftSaveCollection::global()
-                    .lock()
-                    .unwrap()
-                    .saves
-                    .get_mut(&id)
-                    .unwrap()
-                    .latest_version
-                    .take()
-                    .map(Box::new)
-            };
-            let version = {
-                MinecraftSaveVersion::create(
-                    unsafe { std::mem::transmute_copy(&t) },
-                    data.target,
-                    data.id.to_string(),
-                    "".to_string(),
-                    prev,
-                )
-                .await?
-            };
-
-            MinecraftSaveCollection::global()
-                .lock()
-                .unwrap()
-                .saves
-                .get_mut(&id)
-                .unwrap()
-                .latest_version = Some(version);
-            MinecraftSaveCollection::global().lock().unwrap().save()?;
-        }
+        Action::Backup => api_backup(data).await,
         #[allow(unreachable_patterns)]
         i => {
             error!("Unexpected request {:?}", data);
-            return Err(MyError::IllegalArgument {
+            Err(MyError::IllegalArgument {
                 name: "action_id".to_string(),
                 value: format!("{:?}", i),
                 expected: "0, 1".to_string(),
-            });
+            })
         }
     }
-    Ok(())
+}
+
+async fn api_backup(data: ApiData) -> Result<()> {
+    let id: String = data.payload[0].clone();
+    let t: u8 = data.payload[1]
+        .parse()
+        .map_err(|_| MyError::IllegalArgument {
+            name: "type".to_string(),
+            value: data.payload[1].to_string(),
+            expected: "int".to_string(),
+        })?;
+    info!("backup: id={} type={}", id, t);
+    let data = MinecraftSaveCollection::global().lock().unwrap().saves[&id].clone();
+    let prev = {
+        MinecraftSaveCollection::global()
+            .lock()
+            .unwrap()
+            .saves
+            .get_mut(&id)
+            .unwrap()
+            .latest_version
+            .take()
+            .map(Box::new)
+    };
+    if !data.target.contains_key(MACHINE.as_str()) {
+        return Err(MyError::Other(anyhow::anyhow!(
+            "Unable to find target path on local machine"
+        )));
+    }
+    let version = {
+        MinecraftSaveVersion::create(
+            unsafe { std::mem::transmute_copy(&t) },
+            data.target.get(MACHINE.as_str()).unwrap(),
+            data.id.to_string(),
+            "".to_string(),
+            prev,
+        )
+        .await?
+    };
+
+    MinecraftSaveCollection::global()
+        .lock()
+        .unwrap()
+        .saves
+        .get_mut(&id)
+        .unwrap()
+        .latest_version = Some(version);
+    MinecraftSaveCollection::global().lock().unwrap().save()
 }

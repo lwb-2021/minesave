@@ -1,4 +1,3 @@
-#![feature(cfg_select)]
 mod api;
 mod backup;
 mod cmd;
@@ -10,19 +9,17 @@ use crate::{backup::MinecraftSaveCollection, error::Result};
 use clap::Parser;
 use env_logger::Env;
 use log::warn;
-use std::{fs, io::Bytes};
-use tokio::{
-    io::AsyncReadExt,
-    net::{TcpListener, TcpStream},
-};
+use std::fs;
+use tokio::net::{TcpListener, TcpStream};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let env = Env::new().filter_or(
         "RUST_LOG",
-        cfg_select! {
-            debug_assertions => {"minesave=debug"}
-            _ => {"minesave=info"}
+        if cfg!(debug_assertions) {
+            "minesave=debug"
+        } else {
+            "minesave=info"
         },
     );
     env_logger::init_from_env(env);
@@ -40,7 +37,7 @@ async fn main() -> Result<()> {
         };
     }
     match parameters.command {
-        None | Some(cmd::Command::UI) => {
+        Some(cmd::Command::UI) | None => {
             slint_api::run_ui().unwrap();
             start_daemon_server().await?;
         }
@@ -62,22 +59,27 @@ fn create_dirs() -> Result<()> {
 }
 
 async fn start_daemon_server() -> Result<()> {
-    tokio::spawn(daemon()).await?;
-    log::info!("daemon started");
+    tokio::spawn(daemon()).await??;
     Ok(())
 }
 async fn daemon() -> Result<()> {
     let server = TcpListener::bind("127.0.0.1:7908").await?;
 
+    log::debug!("bind: 127.0.0.1:7908");
+
+    log::info!("daemon started");
     loop {
-        if let Ok((mut conn, _addr)) = server.accept().await {
-            daemon_inner(&mut conn).await;
+        if let Ok((mut conn, addr)) = server.accept().await {
+            match daemon_inner(&mut conn).await {
+                Ok(()) => log::debug!("request handled: addr={:?}", addr),
+                Err(err) => log::error!("Failed to handle request: {:?}", err),
+            };
         } else {
             log::error!("Failed to accept connection");
         }
     }
 }
 #[inline]
-async fn daemon_inner(conn: &mut TcpStream) -> Result<()> {
+async fn daemon_inner(_conn: &mut TcpStream) -> Result<()> {
     Ok(())
 }

@@ -3,12 +3,14 @@ import {
     SwitchWithLabel,
     WithLabel,
 } from "../components/labelled_things.slint";
+import { SlintAPI } from "../logic/api.slint";
 
 @rust-attr(derive(serde::Serialize, serde::Deserialize)] #[serde(default))
 struct SettingsInner {
       autostart: bool,
       cron: bool,
-sync: bool,
+      sync: bool,
+      sync-remote: string,
 }
 
 export global Settings {
@@ -60,7 +62,7 @@ export component SettingsPage inherits Rectangle {
             // }
             Text {
                 font-size: 18px;
-                text: "同步(TODO)";
+                text: "同步(Experimental)";
             }
 
             SwitchWithLabel {
@@ -68,6 +70,27 @@ export component SettingsPage inherits Rectangle {
                 checked: Settings.settings.sync;
                 toggled => {
                     Settings.settings.sync = self.checked;
+                }
+            }
+
+            if Settings.settings.sync: VerticalLayout {
+                spacing: 8px;
+                WithLabel {
+                    text: "RClone版本";
+
+                    Text {
+                        text: SlintAPI.rclone-version();
+                    }
+                }
+
+                WithLabel {
+                    text: "RClone Remote";
+                    LineEdit {
+                        text: Settings.settings.sync-remote;
+                        edited(text) => {
+                            Settings.settings.sync-remote = text;
+                        }
+                    }
                 }
             }
 

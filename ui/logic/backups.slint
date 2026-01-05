@@ -14,5 +14,6 @@ export global Backups {
     in-out property <[MinecraftSaveMeta]> backups;
     callback run-backup(id: string, name: string, type: int);
     callback change-description(name: string, description: string);
+    callback add-scan-root(path: string);
     callback refresh();
 }

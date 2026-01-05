@@ -1,0 +1,47 @@
+import {
+    StandardButton,
+    Palette,
+    Button,
+    LineEdit,
+} from "std-widgets.slint";
+import { Backups } from "../../logic/backups.slint";
+import { SlintAPI } from "../../logic/api.slint";
+export component AddScanRootDialog inherits Dialog {
+    title: "增加扫描路径";
+    background: Palette.alternate-background;
+    VerticalLayout {
+        Text {
+            font-size: 24px;
+            text: "增加扫描路径";
+        }
+
+        HorizontalLayout {
+            text-box := LineEdit {
+                min-height: 36px;
+                min-width: 240px;
+            }
+
+            Button {
+                text: "浏览";
+                clicked => {
+                    text-box.text = SlintAPI.directory-chooser();
+                }
+            }
+        }
+    }
+
+    StandardButton {
+        kind: ok;
+        clicked => {
+            Backups.add-scan-root(text-box.text);
+            parent.visible = false;
+        }
+    }
+
+    StandardButton {
+        kind: cancel;
+        clicked => {
+            parent.visible = false;
+        }
+    }
+}

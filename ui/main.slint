@@ -2,8 +2,11 @@ import { SideBar } from "sidebar.slint";
 import { RouterView } from "views/pages.slint";
 import { Palette } from "std-widgets.slint";
 import { Settings } from "views/settings.slint";
+
+import { SlintAPI } from "logic/api.slint";
 import { Backups } from "logic/backups.slint";
 import { Tasks } from "logic/status.slint";
+
 export component Main inherits Window {
     default-font-family: "Source Sans CN";
     default-font-size: 14px;
@@ -25,4 +28,4 @@ export component Main inherits Window {
     }
 }
 
-export { Settings, Backups, Tasks  }
+export { Settings, Backups, Tasks, SlintAPI  }
