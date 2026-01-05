@@ -1,0 +1,35 @@
+import { ListView, StandardButton, Palette, Button } from "std-widgets.slint";
+import { MinecraftSaveVersionMeta } from "../../logic/backups.slint";
+export component DetailedInformationDialog inherits Dialog {
+    in property <[MinecraftSaveVersionMeta]> versions;
+    title: "详细信息";
+    background: Palette.background;
+    VerticalLayout {
+        padding: 8px;
+        spacing: 8px;
+        Text {
+            text: "详细信息";
+            font-size: 24px;
+        }
+
+        ListView {
+            min-width: 480px;
+            for version in versions: HorizontalLayout {
+                Text {
+                    text: version.time;
+                }
+
+                Button {
+                    text: "恢复(TODO)";
+                }
+            }
+        }
+    }
+
+    StandardButton {
+        kind: close;
+        clicked => {
+            parent.visible = false;
+        }
+    }
+}

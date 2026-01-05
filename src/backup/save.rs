@@ -11,7 +11,7 @@ use std::{
     collections::HashMap,
     env,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::{
     fs::{self, File},
@@ -45,7 +45,8 @@ impl MinecraftSave {
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MinecraftSaveVersion {
-    pub path: PathBuf, // Where the backup is stored
+    pub path: PathBuf,
+    pub time: Duration,
     pub version_type: MinecraftSaveVersionType,
     pub description: String,
     pub prev: Option<Box<Self>>,
@@ -81,15 +82,15 @@ impl MinecraftSaveVersion {
         prev: Option<Box<MinecraftSaveVersion>>,
     ) -> Result<Self> {
         let path = MINESAVE_HOME.join(id);
+        let time = UNIX_EPOCH.elapsed().unwrap();
+
         debug!("backup started");
         fs::create_dir_all(path.join("storage")).await?;
         fs::create_dir_all(path.join("versions")).await?;
         let hash = copy_to_storage(&source, path.join("storage")).await?;
         let packed_hash = rmp_serde::to_vec(&hash)?;
 
-        let version_meta = path
-            .join("versions")
-            .join(UNIX_EPOCH.elapsed().unwrap().as_millis().to_string());
+        let version_meta = path.join("versions").join(time.as_millis().to_string());
 
         File::create(&version_meta)
             .await?
@@ -99,7 +100,8 @@ impl MinecraftSaveVersion {
         debug!("compressing: zstd level=15");
 
         Ok(Self {
-            path: version_meta,
+            path,
+            time,
             description,
             prev,
             version_type: MinecraftSaveVersionType::Full,
@@ -116,13 +118,18 @@ impl MinecraftSaveVersion {
         }
 
         let path = MINESAVE_HOME.join(id);
+        let time = UNIX_EPOCH.elapsed().unwrap();
 
         let mut packed_hash = vec![];
 
-        File::open(&prev.as_ref().unwrap().path)
-            .await?
-            .read_to_end(&mut packed_hash)
-            .await?;
+        File::open(
+            MINESAVE_HOME
+                .join(&prev.as_ref().unwrap().path)
+                .join(prev.as_ref().unwrap().time.as_millis().to_string()),
+        )
+        .await?
+        .read_to_end(&mut packed_hash)
+        .await?;
 
         let mut hash: HashMap<PathBuf, Sha256Sum> = rmp_serde::from_slice(&packed_hash)?;
         let new_hash = hash_diff(&source, &hash).await?;
@@ -138,9 +145,7 @@ impl MinecraftSaveVersion {
             debug!("copied: {:?}", relative);
             hash.insert(relative, item);
         }
-        let version_meta = path
-            .join("versions")
-            .join(UNIX_EPOCH.elapsed().unwrap().as_millis().to_string());
+        let version_meta = path.join("versions").join(time.as_millis().to_string());
         let packed_hash = rmp_serde::to_vec(&hash)?;
         File::create(&version_meta)
             .await?
@@ -148,7 +153,8 @@ impl MinecraftSaveVersion {
             .await?;
 
         Ok(Self {
-            path: version_meta,
+            path,
+            time,
             description,
             prev,
             version_type: MinecraftSaveVersionType::IncreasementFile,
@@ -192,10 +198,15 @@ impl MinecraftSaveVersion {
     }
     async fn recover_self<P: AsRef<Path>>(&self, target: P) -> Result<()> {
         let mut packed_hash = vec![];
-        File::open(&self.path)
-            .await?
-            .read_to_end(&mut packed_hash)
-            .await?;
+        File::open(
+            MINESAVE_HOME
+                .join(&self.path)
+                .join("versions")
+                .join(self.time.as_millis().to_string()),
+        )
+        .await?
+        .read_to_end(&mut packed_hash)
+        .await?;
 
         let hash: HashMap<PathBuf, Sha256Sum> = rmp_serde::from_slice(&packed_hash)?;
         for (relative, hash) in hash {

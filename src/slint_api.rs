@@ -1,8 +1,16 @@
 use anyhow::Result;
+use chrono::{DateTime, Local};
 use duct::cmd;
 use log::error;
 use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecModel};
-use std::{fs::File, path::PathBuf, process, rc::Rc, vec};
+use std::{
+    fs::File,
+    path::PathBuf,
+    process,
+    rc::Rc,
+    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    vec,
+};
 use tray::{TrayIcon, TrayIconAttributes};
 
 use crate::{
@@ -97,6 +105,7 @@ fn register(app: &Main) {
                         version_type as i32
                     },
                     description: p.description.to_shared_string(),
+                    time: format_duration(version.time).to_shared_string(),
                 });
                 while let Some(version) = &p.prev {
                     p = version;
@@ -106,6 +115,7 @@ fn register(app: &Main) {
                             version_type as i32
                         },
                         description: version.description.to_shared_string(),
+                        time: format_duration(version.time).to_shared_string(),
                     });
                 }
             }
@@ -210,4 +220,9 @@ fn spawn_task(app: &Main, name: String, action: Action, payload: Vec<String>) {
         status.push(255);
     }
     tasks.set_index(tasks.get_index() + 1);
+}
+
+fn format_duration(duration: Duration) -> String {
+    let date_time: DateTime<Local> = (UNIX_EPOCH + duration).into();
+    date_time.format("%Y/%m/%d %H:%M:%S").to_string()
 }

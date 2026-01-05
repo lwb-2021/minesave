@@ -1,5 +1,9 @@
 import { Palette, Button } from "std-widgets.slint";
-import { Backups } from "../logic/backups.slint";
+import {
+    Backups,
+    MinecraftSaveMeta,
+    MinecraftSaveVersionMeta,
+} from "../logic/backups.slint";
 export component Card inherits Rectangle {
     border-radius: 12px;
     preferred-width: 400px;
@@ -9,19 +13,18 @@ export component Card inherits Rectangle {
 }
 
 export component SaveCard inherits Card {
-    in property <string> id;
-    in property <string> name;
-    in property <string> description;
+    in property <MinecraftSaveMeta> item;
+    callback show-detailed-information([MinecraftSaveVersionMeta]);
     VerticalLayout {
         padding: 8px;
         spacing: 4px;
         Text {
-            text: name;
+            text: item.name;
             font-size: 24px;
         }
 
         Text {
-            text: description;
+            // text: item.description; //TODO
         }
 
         HorizontalLayout {
@@ -31,13 +34,14 @@ export component SaveCard inherits Card {
                 icon: @image-url("../icon/backup.png");
                 colorize-icon: true;
                 clicked => {
-                    Backups.run-backup(id, name, 255);
+                    Backups.run-backup(item.id, item.name, 255);
                 }
             }
 
             Button {
                 text: "详细信息(正在开发)";
                 clicked => {
+                    show-detailed-information(item.versions)
                 }
             }
         }

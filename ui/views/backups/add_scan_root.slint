@@ -8,8 +8,10 @@ import { Backups } from "../../logic/backups.slint";
 import { SlintAPI } from "../../logic/api.slint";
 export component AddScanRootDialog inherits Dialog {
     title: "增加扫描路径";
-    background: Palette.alternate-background;
+    background: Palette.background;
     VerticalLayout {
+        padding: 8px;
+        spacing: 8px;
         Text {
             font-size: 24px;
             text: "增加扫描路径";
