@@ -10,7 +10,10 @@ use clap::Parser;
 use env_logger::Env;
 use log::warn;
 use std::fs;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    task::JoinHandle,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -38,8 +41,9 @@ async fn main() -> Result<()> {
     }
     match parameters.command {
         Some(cmd::Command::UI) | None => {
+            let handle = start_daemon_server().await?;
             slint_api::run_ui().unwrap();
-            start_daemon_server().await?;
+            handle.abort();
         }
         Some(cmd::Command::Daemon) => {
             daemon().await?;
@@ -58,9 +62,8 @@ fn create_dirs() -> Result<()> {
     Ok(())
 }
 
-async fn start_daemon_server() -> Result<()> {
-    tokio::spawn(daemon()).await??;
-    Ok(())
+async fn start_daemon_server() -> Result<JoinHandle<Result<()>>> {
+    Ok(tokio::spawn(daemon()))
 }
 async fn daemon() -> Result<()> {
     let server = TcpListener::bind("127.0.0.1:7908").await?;

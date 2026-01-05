@@ -1,10 +1,10 @@
 use crate::{
     Result,
-    backup::hash::{Sha256Sum, create_full_copy_with_hash, hash_diff},
+    backup::hash::{Sha256Sum, copy_file_to_storage, copy_to_storage, hash_diff},
     globals::{MACHINE, MINESAVE_HOME},
 };
 use anyhow::anyhow;
-use async_compression::tokio::write::ZstdEncoder;
+use async_compression::tokio::bufread::ZstdDecoder;
 use log::debug;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -15,9 +15,8 @@ use std::{
 };
 use tokio::{
     fs::{self, File},
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{self, AsyncReadExt, AsyncWriteExt, BufReader},
 };
-use tokio_tar::Builder;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MinecraftSave {
@@ -81,33 +80,26 @@ impl MinecraftSaveVersion {
         description: String,
         prev: Option<Box<MinecraftSaveVersion>>,
     ) -> Result<Self> {
-        let path = MINESAVE_HOME.join(id).join(
-            std::time::UNIX_EPOCH
-                .elapsed()
-                .unwrap()
-                .as_millis()
-                .to_string(),
-        );
+        let path = MINESAVE_HOME.join(id);
         debug!("backup started");
-        fs::create_dir_all(&path).await?;
-        let hash = create_full_copy_with_hash(&source, &path).await?;
+        fs::create_dir_all(path.join("storage")).await?;
+        fs::create_dir_all(path.join("versions")).await?;
+        let hash = copy_to_storage(&source, path.join("storage")).await?;
         let packed_hash = rmp_serde::to_vec(&hash)?;
-        File::create(&path.with_file_name("hash.dat"))
+
+        let version_meta = path
+            .join("versions")
+            .join(UNIX_EPOCH.elapsed().unwrap().as_millis().to_string());
+
+        File::create(&version_meta)
             .await?
             .write_all(&packed_hash)
             .await?;
         debug!("hash created");
         debug!("compressing: zstd level=15");
-        let archive = File::create(path.with_extension("tar.zst")).await?;
-        let encoder = ZstdEncoder::with_quality(archive, async_compression::Level::Precise(15));
-        let mut builder = Builder::new(encoder);
-        builder.append_dir_all(".", &path).await?;
-        builder.into_inner().await?.shutdown().await?; // into_inner finishes the archive
-        debug!("compress finished");
-        fs::remove_dir_all(&path).await?;
 
         Ok(Self {
-            path: path.with_extension("tar.zst").to_path_buf(),
+            path: version_meta,
             description,
             prev,
             version_type: MinecraftSaveVersionType::Full,
@@ -123,17 +115,11 @@ impl MinecraftSaveVersion {
             return Self::create_version_full(source, id, description, prev).await;
         }
 
-        let path = MINESAVE_HOME.join(id).join(
-            std::time::UNIX_EPOCH
-                .elapsed()
-                .unwrap()
-                .as_millis()
-                .to_string(),
-        );
-        fs::create_dir_all(&path).await?;
+        let path = MINESAVE_HOME.join(id);
 
         let mut packed_hash = vec![];
-        File::open(&path.with_file_name("hash.dat"))
+
+        File::open(&prev.as_ref().unwrap().path)
             .await?
             .read_to_end(&mut packed_hash)
             .await?;
@@ -142,25 +128,34 @@ impl MinecraftSaveVersion {
         let new_hash = hash_diff(&source, &hash).await?;
         for (relative, item) in new_hash {
             debug!("change detected: {:?}", relative);
-            fs::copy(source.as_ref().join(&relative), path.join(&relative)).await?;
+            copy_file_to_storage(
+                source.as_ref().join(&relative),
+                &path,
+                relative.to_string_lossy().to_string(),
+            )
+            .await?;
+
             debug!("copied: {:?}", relative);
             hash.insert(relative, item);
         }
-
+        let version_meta = path
+            .join("versions")
+            .join(UNIX_EPOCH.elapsed().unwrap().as_millis().to_string());
         let packed_hash = rmp_serde::to_vec(&hash)?;
-        File::create(&path.with_file_name("hash.dat"))
+        File::create(&version_meta)
             .await?
             .write_all(&packed_hash)
             .await?;
 
         Ok(Self {
-            path,
+            path: version_meta,
             description,
             prev,
             version_type: MinecraftSaveVersionType::IncreasementFile,
         })
     }
     pub async fn merge(self, save_name: String) -> Result<Self> {
+        // TODO More effecient version
         let temp = env::temp_dir().join(
             SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -178,7 +173,7 @@ impl MinecraftSaveVersion {
         )
         .await
     }
-    pub async fn recover<P: AsRef<Path>>(&self, target: P) -> Result<Self> {
+    pub async fn recover<P: AsRef<Path>>(&self, target: P) -> Result<()> {
         if self.version_type == MinecraftSaveVersionType::Full {
             return self.recover_self(target).await;
         }
@@ -195,8 +190,33 @@ impl MinecraftSaveVersion {
             .await?;
         self.recover_self(&target).await
     }
-    async fn recover_self<P: AsRef<Path>>(&self, _target: P) -> Result<Self> {
-        todo!()
+    async fn recover_self<P: AsRef<Path>>(&self, target: P) -> Result<()> {
+        let mut packed_hash = vec![];
+        File::open(&self.path)
+            .await?
+            .read_to_end(&mut packed_hash)
+            .await?;
+
+        let hash: HashMap<PathBuf, Sha256Sum> = rmp_serde::from_slice(&packed_hash)?;
+        for (relative, hash) in hash {
+            io::copy(
+                &mut ZstdDecoder::new(BufReader::new(
+                    File::open(
+                        &self
+                            .path
+                            .parent()
+                            .unwrap()
+                            .join("storage")
+                            .join(hash.to_string()),
+                    )
+                    .await?,
+                )),
+                &mut File::open(target.as_ref().join(&relative)).await?,
+            )
+            .await?;
+            debug!("recovered: {:?}", relative);
+        }
+        Ok(())
     }
 }
 
