@@ -146,7 +146,7 @@ pub async fn copy_file_to_storage<P: AsRef<Path>, Q: AsRef<Path>>(
     let hash: Sha256Sum = context.finish().into();
 
     encoder.flush().await?;
-    encoder.into_inner().shutdown().await?;
+    encoder.shutdown().await?;
 
     let dst_file = dst.join(hash.to_string()).with_extension("zst");
     if std::fs::exists(&dst_file)? {
@@ -154,7 +154,7 @@ pub async fn copy_file_to_storage<P: AsRef<Path>, Q: AsRef<Path>>(
         debug!("exists: {:?}, hash={}", name, hash);
         return Ok(hash);
     }
-    debug!("copied: {:?}, hash={}", name, hash);
+    debug!("backup: copied=[{:?}, hash={}]", name, hash);
     fs::rename(dst.join(&tmp_name), &dst_file).await?;
     Ok(hash)
 }

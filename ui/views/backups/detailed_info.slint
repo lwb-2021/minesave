@@ -1,6 +1,7 @@
 import { ListView, StandardButton, Palette, Button } from "std-widgets.slint";
-import { MinecraftSaveVersionMeta } from "../../logic/backups.slint";
+import { MinecraftSaveVersionMeta, Backups } from "../../logic/backups.slint";
 export component DetailedInformationDialog inherits Dialog {
+    in property <string> id;
     in property <[MinecraftSaveVersionMeta]> versions;
     title: "详细信息";
     background: Palette.background;
@@ -12,7 +13,12 @@ export component DetailedInformationDialog inherits Dialog {
             font-size: 24px;
         }
 
-        ListView {
+        if versions.length == 0: Text {
+            text: "无备份数据";
+            font-size: 18px;
+        }
+
+        if versions.length != 0: ListView {
             min-width: 480px;
             for version in versions: HorizontalLayout {
                 Text {
@@ -21,6 +27,9 @@ export component DetailedInformationDialog inherits Dialog {
 
                 Button {
                     text: "恢复(TODO)";
+                    clicked => {
+                        Backups.run-recover(id, version.index);
+                    }
                 }
             }
         }

@@ -1,4 +1,5 @@
-export struct MinecraftSaveVersionMeta {     
+export struct MinecraftSaveVersionMeta {
+  index: int,
   type: int,
   time: string,
   description: string,
@@ -14,6 +15,7 @@ export struct MinecraftSaveMeta {
 export global Backups {
     in-out property <[MinecraftSaveMeta]> backups;
     callback run-backup(id: string, name: string, type: int);
+    callback run-recover(id: string, index: int);
     callback change-description(name: string, description: string);
     callback add-scan-root(path: string);
     callback refresh();

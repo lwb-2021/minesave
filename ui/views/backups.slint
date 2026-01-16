@@ -34,6 +34,7 @@ export component BackupsPage inherits Rectangle {
                 show-detailed-information(versions) => {
                     detailed-info-dialog.visible = true;
                     detailed-info-dialog.versions = versions;
+                    detailed-info-dialog.id = item.id;
                 }
             }
         }

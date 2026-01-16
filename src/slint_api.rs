@@ -83,6 +83,16 @@ fn register(app: &Main) {
         );
     });
     let app_weak = app.as_weak();
+    app.global::<Backups>().on_run_recover(move |id, index| {
+        let app = app_weak.upgrade().unwrap();
+        spawn_task(
+            &app,
+            format!("Recover: {} {}", id, index),
+            Action::Recover,
+            vec![format!("{}", id), format!("{}", index)],
+        );
+    });
+    let app_weak = app.as_weak();
     app.global::<Backups>().on_refresh(move || {
         let app = app_weak.upgrade().unwrap();
         let backups = app.global::<Backups>();
@@ -99,6 +109,7 @@ fn register(app: &Main) {
             let mut versions = vec![];
             if let Some(version) = &item.latest_version {
                 let mut p = version;
+                let mut index: usize = 0;
                 versions.push(MinecraftSaveVersionMeta {
                     r#type: unsafe {
                         let version_type: u8 = std::mem::transmute_copy(&p.version_type);
@@ -106,9 +117,11 @@ fn register(app: &Main) {
                     },
                     description: p.description.to_shared_string(),
                     time: format_duration(version.time).to_shared_string(),
+                    index: index as i32,
                 });
                 while let Some(version) = &p.prev {
                     p = version;
+                    index += 1;
                     versions.push(MinecraftSaveVersionMeta {
                         r#type: unsafe {
                             let version_type: u8 = std::mem::transmute_copy(&version.version_type);
@@ -116,6 +129,7 @@ fn register(app: &Main) {
                         },
                         description: version.description.to_shared_string(),
                         time: format_duration(version.time).to_shared_string(),
+                        index: index as i32,
                     });
                 }
             }
@@ -150,7 +164,7 @@ fn register(app: &Main) {
         cmd!("rclone", "--version")
             .read()
             .unwrap_or(
-                "无法找到Rclone，请确认Rclone是否安装 安装教程https://rclone.org/install"
+                "无法找到Rclone，请确认Rclone是否安装 安装教程 https://rclone.org/install"
                     .to_string(),
             )
             .lines()
@@ -191,7 +205,8 @@ fn spawn_task(app: &Main, name: String, action: Action, payload: Vec<String>) {
     let result = slint::spawn_local(async move {
         let result =
             tokio::spawn(async move { api::handle_request(ApiData { action, payload }).await })
-                .await;
+                .await
+                .unwrap();
         slint::invoke_from_event_loop(move || {
             let app = app_weak.upgrade().unwrap();
             let tasks = app.global::<Tasks>();
