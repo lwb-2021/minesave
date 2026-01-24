@@ -7,7 +7,6 @@ use crate::{
     error::{MyError, Result},
     globals::MACHINE,
 };
-use anyhow::bail;
 use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 
@@ -44,6 +43,7 @@ pub fn write_api_help<W: Write>(stream: &mut W) -> Result<()> {
     writeln!(stream, "Recover: action_id=2, id=?, version_index=?")?;
     Ok(())
 }
+
 
 pub async fn handle_request(data: ApiData) -> Result<()> {
     debug!("request received: {:?}", data);

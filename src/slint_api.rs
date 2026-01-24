@@ -6,9 +6,8 @@ use slint::{ComponentHandle, Model, ModelRc, SharedString, ToSharedString, VecMo
 use std::{
     fs::File,
     path::PathBuf,
-    process,
     rc::Rc,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, UNIX_EPOCH},
     vec,
 };
 use tray::{TrayIcon, TrayIconAttributes};

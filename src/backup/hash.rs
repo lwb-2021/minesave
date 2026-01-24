@@ -1,12 +1,11 @@
 use std::{
     collections::HashMap,
-    fmt::{Display, Write},
+    fmt::Display,
     path::{Path, PathBuf},
-    time::UNIX_EPOCH,
 };
 
 use async_compression::tokio::write::ZstdEncoder;
-use log::{debug, error, warn};
+use log::debug;
 use ring::digest::{Digest, SHA256};
 use serde::{Deserialize, Serialize};
 use tokio::{

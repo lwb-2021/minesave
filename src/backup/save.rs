@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    backup::hash::{Sha256Sum, copy_file_to_storage, copy_to_storage, hash_diff},
+    backup::hash::{Sha256Sum, copy_to_storage},
     globals::{MACHINE, MINESAVE_HOME},
 };
 use anyhow::anyhow;
@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{Duration, UNIX_EPOCH},
 };
 use tokio::{
     fs::{self, File},
