@@ -1,0 +1,13 @@
+_version: 1
+
+placeholder: "Developing"
+pages:
+  home:
+    welcome: "Welcome to MineSave"
+  settings:
+    add-scan-root: "Add scan root"
+    sync: "Sync"
+    save: "Save"
+    
+messages:
+  action-cancelled: "Action cancelled"

@@ -18,9 +18,21 @@
       let
         pkgs = import nixpkgs { inherit system; };
         naersk-lib = pkgs.callPackage naersk { };
+
+        deps = with pkgs; [
+          pkg-config
+          glib
+          cairo
+          gdk-pixbuf
+          pango
+          gtk4
+        ];
       in
       {
-        defaultPackage = naersk-lib.buildPackage ./.;
+        defaultPackage = naersk-lib.buildPackage {
+          src = ./.;
+          buildInputs = deps;
+        };
         devShell =
           with pkgs;
           mkShell {
@@ -30,7 +42,8 @@
               rustfmt
               pre-commit
               rustPackages.clippy
-            ];
+            ]
+            ++ deps;
             RUST_SRC_PATH = rustPlatform.rustLibSrc;
           };
       }

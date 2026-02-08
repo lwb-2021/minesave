@@ -1,0 +1,15 @@
+_version: 1
+
+placeholder: "正在开发中"
+
+pages:
+  home:
+    welcome: "欢迎来到MineSave"
+  settings:
+    add-scan-root: "增加扫描路径"
+    sync: "同步"
+    save: "保存"
+
+messages:
+  action-cancelled: "操作已取消"
+    
