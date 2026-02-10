@@ -1,6 +1,5 @@
 use gtk4::{
-    Box, Button, Entry, Label, Switch, Text, TextBuffer, TextView,
-    ffi::GtkTextView,
+    Box, Button, Entry, Label, Switch, TextView,
     prelude::{BoxExt, ButtonExt, EditableExt, EntryExt, TextBufferExt, TextViewExt},
 };
 use native_dialog::DialogBuilder;

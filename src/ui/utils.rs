@@ -1,6 +1,6 @@
 use gtk4::{
-    Box, CssProvider, Label, Orientation, Widget,
-    prelude::{BoxExt, StyleContextExt, WidgetExt},
+    Box, CssProvider, Label,
+    prelude::{StyleContextExt, WidgetExt},
 };
 
 pub fn title<S: std::fmt::Display>(content: S) -> Label {

@@ -1,12 +1,9 @@
 use crate::utils::report_err;
-use rustic_backend::BackendOptions;
 use serde::{Deserialize, Serialize};
 use std::{
-    error::Error,
     fs::{self, File},
-    io::Write,
     path::PathBuf,
-    sync::{LazyLock, Mutex, MutexGuard, OnceLock},
+    sync::{LazyLock, Mutex, MutexGuard},
 };
 
 static CONFIG_HOME: LazyLock<PathBuf> = LazyLock::new(|| {

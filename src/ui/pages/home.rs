@@ -1,6 +1,6 @@
 use gtk4::{
-    Box, CssProvider, GridLayout, GridView, Label, Orientation, Widget,
-    prelude::{BoxExt, GridExt, LayoutManagerExt, StyleContextExt, WidgetExt},
+    Box, GridLayout, Orientation,
+    prelude::{BoxExt, GridExt, WidgetExt},
 };
 
 use crate::ui::{

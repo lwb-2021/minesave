@@ -1,9 +1,8 @@
 use crate::utils::report_err;
 use gtk4::{
-    Application, CssProvider,
+    Application,
     gio::prelude::{ApplicationExt, ApplicationExtManual},
     glib::ExitCode,
-    prelude::{GtkWindowExt, WidgetExt},
 };
 
 mod main_window;

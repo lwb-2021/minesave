@@ -1,5 +1,5 @@
 use crate::{settings::Settings, utils::report_err};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, bail};
 use rustic_backend::BackendOptions;
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, PathList, Repository,
@@ -111,7 +111,7 @@ impl SaveBackupConfiguration {
         let repo = repo
             .to_indexed_ids()
             .inspect_err(report_err("Failed to index repo"))?;
-        let mut backup_options = BackupOptions::default();
+        let backup_options = BackupOptions::default();
         let source = PathList::from_string(
             self.source
                 .to_str()

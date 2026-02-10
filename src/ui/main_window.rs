@@ -1,4 +1,4 @@
-use gtk4::{Application, ApplicationWindow, Button, Notebook, Text, prelude::*};
+use gtk4::{Application, ApplicationWindow, Notebook, prelude::*};
 
 use crate::ui::pages::pages;
 pub fn main_window(app: &Application) {
