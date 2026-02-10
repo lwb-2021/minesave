@@ -5,9 +5,18 @@ pages:
   home:
     welcome: "Welcome to MineSave"
   settings:
+    basic: "Basic"
+    experimental: "Experimental"
+    password: "Password"
+    password-command: "Password Command"
+    scan-root: "Scan root"
     add-scan-root: "Add scan root"
     sync: "Sync"
     save: "Save"
     
 messages:
   action-cancelled: "Action cancelled"
+  set-password: "Please set a password for your backups"
+  backup-failed: "Backup failed"
+  failed-check: "Check failed"
+  cannot-enable-together: "'%s' and '%s' cannot be enabled together"

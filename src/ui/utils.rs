@@ -7,6 +7,8 @@ pub fn title<S: std::fmt::Display>(content: S) -> Label {
     Label::builder()
         .use_markup(true)
         .label(format!("<span size='x-large'>{}</span>", content))
+        .justify(gtk4::Justification::Left)
+        .halign(gtk4::Align::Start)
         .build()
 }
 pub fn cardify(target: Box) -> Box {

@@ -6,10 +6,21 @@ pages:
   home:
     welcome: "欢迎来到MineSave"
   settings:
+    basic: "基础"
+    experimental: "实验性"
+    password: "密码"
+    password-command: "获取密码的命令"
+    scan-root: "扫描路径(一行一个)"
     add-scan-root: "增加扫描路径"
     sync: "同步"
     save: "保存"
 
 messages:
   action-cancelled: "操作已取消"
+  set-password: "请为备份设置密码"
+  backup-failed: "备份已失败"
+  failed-check: "校验失败"
+  cannot-enable-together: "%{a} 和 %{b} 不能同时启用"
+  
+  
     

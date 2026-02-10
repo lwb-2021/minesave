@@ -10,9 +10,15 @@ use std::{
 };
 
 static CONFIG_HOME: LazyLock<PathBuf> = LazyLock::new(|| {
-    dirs::config_dir()
-        .unwrap_or_else(|| dirs::home_dir().expect("Cannot locate config home"))
-        .join("minesave")
+    dirs::preference_dir().map_or_else(
+        || {
+            dirs::home_dir()
+                .expect("Cannot locate config home")
+                .join(".minesave")
+                .join("config")
+        },
+        |x| x.join("minesave"),
+    )
 });
 
 #[derive(Debug, Serialize, Deserialize, Default)]
@@ -20,6 +26,7 @@ pub struct Settings {
     pub language: String,
     pub scan_root: Vec<PathBuf>,
     pub sync: bool,
+    pub remote: Option<String>,
     pub password: Option<String>,
     pub password_cmd: Option<String>,
 }
