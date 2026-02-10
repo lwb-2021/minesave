@@ -18,12 +18,16 @@ pub fn settings() -> Box {
         .label(&t!("pages.settings.save").to_string())
         .build();
 
-    let (b1, pass_input_box) = text_input(
+    let (b1, compression_level_input) = text_input(
+        t!("pages.settings.compression-level"),
+        Settings::instance().compression_level.to_string(),
+    );
+    let (b2, pass_input_box) = text_input(
         t!("pages.settings.password"),
         Settings::instance().password.clone().unwrap_or_default(),
     );
     pass_input_box.set_visibility(false);
-    let (b2, pass_cmd_input_box) = text_input(
+    let (b3, pass_cmd_input_box) = text_input(
         t!("pages.settings.password-command"),
         Settings::instance()
             .password_cmd
@@ -31,7 +35,7 @@ pub fn settings() -> Box {
             .unwrap_or_default(),
     );
 
-    let (b3, sync_switch) = switch(t!("pages.settings.sync"), Settings::instance().sync);
+    let (b4, sync_switch) = switch(t!("pages.settings.sync"), Settings::instance().sync);
 
     let scan_root_input: TextView = TextView::builder().build();
     let scan_root_input_buffer0 = scan_root_input.buffer();
@@ -81,6 +85,7 @@ pub fn settings() -> Box {
     wrapper.append(&title(t!("pages.settings.basic")));
     wrapper.append(&b1);
     wrapper.append(&b2);
+    wrapper.append(&b3);
     wrapper.append(
         &Label::builder()
             .halign(gtk4::Align::Start)
@@ -93,22 +98,38 @@ pub fn settings() -> Box {
     wrapper.append(&add_scan_root_button);
 
     wrapper.append(&title(t!("pages.settings.experimental")));
-    wrapper.append(&b3);
+    wrapper.append(&b4);
 
     save_button.connect_clicked(move |_| {
         let mut instance = Settings::instance();
+
+        if let Ok(level) = compression_level_input.text().parse() {
+            instance.compression_level = level;
+        } else {
+            DialogBuilder::message()
+                .set_title(t!("message.failed-heck"))
+                .set_text(t!(
+                    "message.int-wanted",
+                    entry = t!("pages.settings.compression-level")
+                ))
+                .alert();
+        }
+
         let password = pass_input_box.text();
         let password_cmd = pass_cmd_input_box.text();
         if !password.is_empty() && !password_cmd.is_empty() {
-            DialogBuilder::message().set_title(format!(
-                "{}: {}",
-                t!("messages.failed-check"),
-                t!(
-                    "messages.cannot-enable-together",
-                    a = t!("pages.settings.password"),
-                    b = t!("pages.settings.password-command")
-                )
-            ));
+            DialogBuilder::message()
+                .set_title(t!("message.failed-check"))
+                .set_text(format!(
+                    "{}: {}",
+                    t!("messages.failed-check"),
+                    t!(
+                        "messages.cannot-enable-together",
+                        a = t!("pages.settings.password"),
+                        b = t!("pages.settings.password-command")
+                    )
+                ))
+                .alert();
             return;
         }
         instance.password = if password.is_empty() {
@@ -150,7 +171,7 @@ fn text_input(label: Cow<str>, init_state: String) -> (Box, Entry) {
             .xalign(0.0)
             .build(),
     );
-    let entry = Entry::builder().text(init_state).build();
+    let entry = Entry::builder().text(init_state).width_chars(48).build();
     b.append(&entry);
     (b, entry)
 }

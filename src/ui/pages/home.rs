@@ -1,7 +1,4 @@
-use gtk4::{
-    Box, GridLayout, Orientation,
-    prelude::{BoxExt, GridExt, WidgetExt},
-};
+use gtk4::{Box, GridLayout, Orientation, prelude::BoxExt};
 
 use crate::ui::{
     pages::build_wrapper,

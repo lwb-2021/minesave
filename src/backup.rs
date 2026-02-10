@@ -7,6 +7,7 @@ use rustic_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
+    cmp::min,
     collections::HashMap,
     hash::{DefaultHasher, Hash, Hasher},
     path::PathBuf,
@@ -97,7 +98,10 @@ impl SaveBackupConfiguration {
             )
         });
         let key_options = KeyOptions::default();
-        let config_options = ConfigOptions::default();
+        let config_options = ConfigOptions::default().set_compression(min(
+            rustic_core::max_compression_level(),
+            Settings::instance().compression_level,
+        ));
         let repo = Repository::new(&repo_options, &backends)
             .inspect_err(report_err("Failed to create backup storage instance"))?;
         let repo = if !self.init {

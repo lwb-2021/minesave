@@ -7,6 +7,7 @@ pages:
     welcome: "欢迎来到MineSave"
   settings:
     basic: "基础"
+    compression-level: "压缩等级"
     experimental: "实验性"
     password: "密码"
     password-command: "获取密码的命令"
@@ -21,6 +22,7 @@ messages:
   backup-failed: "备份已失败"
   failed-check: "校验失败"
   cannot-enable-together: "%{a} 和 %{b} 不能同时启用"
+  int-wanted: "%{entry} 必须为整数"
   
   
     

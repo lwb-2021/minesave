@@ -6,6 +6,7 @@ pages:
     welcome: "Welcome to MineSave"
   settings:
     basic: "Basic"
+    compression-level: "Compression level"
     experimental: "Experimental"
     password: "Password"
     password-command: "Password Command"
@@ -19,4 +20,5 @@ messages:
   set-password: "Please set a password for your backups"
   backup-failed: "Backup failed"
   failed-check: "Check failed"
-  cannot-enable-together: "'%s' and '%s' cannot be enabled together"
+  cannot-enable-together: "'%{a}' and '%{b}' cannot be enabled together"
+  int-wanted: "%{entry} should be an integer"

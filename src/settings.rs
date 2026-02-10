@@ -18,9 +18,17 @@ static CONFIG_HOME: LazyLock<PathBuf> = LazyLock::new(|| {
     )
 });
 
+#[inline]
+const fn default_compression_level() -> i32 {
+    6
+}
+
 #[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(default)]
 pub struct Settings {
     pub language: String,
+    #[serde(default = "default_compression_level")]
+    pub compression_level: i32,
     pub scan_root: Vec<PathBuf>,
     pub sync: bool,
     pub remote: Option<String>,
@@ -41,7 +49,10 @@ impl Settings {
                     settings
                 } else {
                     warn!("Using default settings");
-                    Settings::default()
+                    Settings {
+                        compression_level: 6,
+                        ..Default::default()
+                    }
                 }
             })
         });
