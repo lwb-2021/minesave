@@ -3,7 +3,7 @@ extern crate rust_i18n;
 #[macro_use]
 extern crate log;
 
-use std::{fs::File, io::Sink, path::PathBuf, sync::LazyLock};
+use std::{fs::File, io::Sink, panic, path::PathBuf, sync::LazyLock};
 
 use env_logger::Target;
 
@@ -47,7 +47,12 @@ fn main() {
         .init();
     rust_i18n::set_locale(&sys_locale::get_locale().unwrap_or_else(|| String::from("en-US")));
 
-    AppState::instance().reload();
+    let res = panic::catch_unwind(|| {
+        AppState::instance().reload();
+        ui::run_app();
+    });
 
-    ui::run_app();
+    AppState::instance().save().unwrap_or_default();
+
+    res.unwrap()
 }

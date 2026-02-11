@@ -38,6 +38,7 @@ pub fn home() -> Box {
                         .alert();
                 }
             }
+            AppState::instance().save().unwrap_or_default();
         });
 
         let b = Box::builder()
@@ -45,6 +46,7 @@ pub fn home() -> Box {
             .orientation(Orientation::Vertical)
             .build();
         b.append(&title(t!("pages.home.saves-summary")));
+        b.append(&Label::builder().build());
         b.append(
             &Label::builder()
                 .label(format!(
@@ -55,6 +57,7 @@ pub fn home() -> Box {
                 .xalign(0.0)
                 .build(),
         );
+        b.append(&Label::builder().build());
         b.append(&backup_button);
         b
     }));

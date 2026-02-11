@@ -25,6 +25,7 @@ const fn default_compression_level() -> i32 {
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(default)]
+
 pub struct Settings {
     pub language: String,
     #[serde(default = "default_compression_level")]

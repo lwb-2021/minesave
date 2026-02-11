@@ -4,6 +4,7 @@ use gtk4::{
 };
 
 mod home;
+mod saves;
 mod settings;
 
 pub fn pages(notebook: &mut Notebook) {
@@ -11,6 +12,7 @@ pub fn pages(notebook: &mut Notebook) {
         &home::home(),
         Some(&Image::from_icon_name("go-home-symbolic")),
     );
+    notebook.append_page(&saves::saves(), Some(&Image::from_icon_name("backup")));
     notebook.append_page(
         &settings::settings(),
         Some(&Image::from_icon_name("settings")),

@@ -64,6 +64,19 @@ impl AppState {
             }
             for item in add {
                 let config = SaveBackupConfiguration::new(&item);
+                if let Ok(()) = fs::create_dir_all(MINESAVE_DATA_HOME.join("resources"))
+                    .inspect_err(report_err("Failed to create resources dir"))
+                {
+                    fs::copy(
+                        item.join("icon.png"),
+                        MINESAVE_DATA_HOME
+                            .join("resources")
+                            .join(&config.id)
+                            .with_extension("png"),
+                    )
+                    .inspect_err(report_err("Failed to copy icon to resources"))
+                    .unwrap_or_default();
+                }
                 self.saves.insert(config.id.clone(), config);
                 self.save_dirs.insert(item);
             }
@@ -84,6 +97,7 @@ impl AppState {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaveBackupConfiguration {
     id: String,
+    pub name: String,
     init: bool,
     source: PathBuf,
     #[serde(default)]
@@ -95,6 +109,12 @@ impl SaveBackupConfiguration {
         source.as_ref().hash(&mut hasher);
         Self {
             id: format!("{:x}", hasher.finish()),
+            name: source
+                .as_ref()
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
             init: false,
             source: source.as_ref().to_path_buf(),
             last_snapshot: None,
@@ -110,6 +130,7 @@ impl SaveBackupConfiguration {
         let backends = BackendOptions::default()
             .repo_hot(
                 MINESAVE_DATA_HOME
+                    .join("store")
                     .join(&self.id)
                     .to_string_lossy()
                     .to_string(),
@@ -117,6 +138,7 @@ impl SaveBackupConfiguration {
             .repository(
                 settings.remote.clone().unwrap_or(
                     MINESAVE_DATA_HOME
+                        .join("store")
                         .join(&self.id)
                         .to_string_lossy()
                         .to_string(),
@@ -177,6 +199,7 @@ impl SaveBackupConfiguration {
             )
             .inspect_err(report_err("Failed to create backup"))?,
         );
+
         debug!(
             "backup_finish(id={}, snapshot_id={:x}, option={:?})",
             self.id,
