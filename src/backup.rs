@@ -1,4 +1,4 @@
-use crate::{settings::Settings, utils::report_err};
+use crate::{MINESAVE_DATA_HOME, settings::Settings, utils::report_err};
 use anyhow::{Result, bail};
 use rustic_backend::BackendOptions;
 use rustic_core::{
@@ -8,31 +8,18 @@ use rustic_core::{
 use serde::{Deserialize, Serialize};
 use std::{
     cmp::min,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
+    fs::{self, File},
     hash::{DefaultHasher, Hash, Hasher},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{LazyLock, Mutex, MutexGuard},
 };
 
-static MINESAVE_DATA_HOME: LazyLock<PathBuf> = LazyLock::new(|| {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| {
-            dirs::document_dir().map_or_else(
-                || {
-                    dirs::home_dir()
-                        .expect("Cannot locate data home")
-                        .join(".minesave")
-                        .join("data")
-                },
-                |x| x.join("minesave"),
-            )
-        })
-        .to_path_buf()
-});
-
 #[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppState {
-    saves: HashMap<String, SaveBackupConfiguration>,
+    pub save_dirs: HashSet<PathBuf>,
+    pub saves: HashMap<String, SaveBackupConfiguration>,
 }
 
 impl AppState {
@@ -41,46 +28,104 @@ impl AppState {
             LazyLock::new(|| Mutex::new(AppState::default()));
         INSTANCE.lock().unwrap()
     }
-}
 
+    pub fn reload(&mut self) {
+        debug!("load_state");
+        if let Ok(()) = fs::create_dir_all(MINESAVE_DATA_HOME.to_path_buf())
+            .inspect_err(report_err("Failed to create data dir"))
+            && let Ok(file) = fs::File::open(MINESAVE_DATA_HOME.join("state.json"))
+                .inspect_err(report_err("Failed to open state file"))
+        {
+            *self = serde_json::from_reader(file)
+                .inspect_err(report_err("Failed to read state file"))
+                .unwrap_or_default();
+        }
+
+        debug!("rescan_saves");
+        for item in Settings::instance().scan_root.iter() {
+            let save_dirs: HashSet<PathBuf> = walkdir::WalkDir::new(item)
+                .into_iter()
+                .filter_map(|x| x.inspect_err(report_err("Error when visiting dir")).ok())
+                .filter(|x| x.file_type().is_dir())
+                .filter(|x| {
+                    fs::exists(x.path().join("level.dat"))
+                        .inspect_err(report_err("Error when visiting dir "))
+                        .is_ok_and(|x| x)
+                })
+                .map(|x| x.into_path())
+                .collect();
+            let add: Vec<PathBuf> = save_dirs.difference(&self.save_dirs).cloned().collect();
+            let delete: HashSet<PathBuf> = self.save_dirs.difference(&save_dirs).cloned().collect();
+            let mut delete_keys = vec![]; // TODO: for GC
+            for (k, v) in self.saves.iter() {
+                if delete.contains(&v.source) {
+                    delete_keys.push(k.clone());
+                }
+            }
+            for item in add {
+                let config = SaveBackupConfiguration::new(&item);
+                self.saves.insert(config.id.clone(), config);
+                self.save_dirs.insert(item);
+            }
+        }
+        self.save().unwrap_or_default()
+    }
+    pub fn save(&self) -> Result<()> {
+        debug!("save_state");
+        serde_json::to_writer(
+            File::create(MINESAVE_DATA_HOME.join("state.json"))
+                .inspect_err(report_err("Failed to save state file"))?,
+            self,
+        )
+        .inspect_err(report_err("Failed to save state file"))?;
+        Ok(())
+    }
+}
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SaveBackupConfiguration {
     id: String,
     init: bool,
     source: PathBuf,
-    #[serde(skip, default)]
+    #[serde(default)]
     last_snapshot: Option<SnapshotFile>,
 }
 impl SaveBackupConfiguration {
-    pub fn new(source: PathBuf) -> Self {
+    pub fn new<P: AsRef<Path>>(source: P) -> Self {
         let mut hasher = DefaultHasher::new();
-        source.hash(&mut hasher);
+        source.as_ref().hash(&mut hasher);
         Self {
             id: format!("{:x}", hasher.finish()),
             init: false,
-            source,
+            source: source.as_ref().to_path_buf(),
             last_snapshot: None,
         }
     }
     pub fn run_backup(&mut self, snapshot_options: SnapshotOptions) -> Result<()> {
-        let mut backend_options = BackendOptions::default();
-        backend_options.repo_hot = Some(
-            MINESAVE_DATA_HOME
-                .join(&self.id)
-                .to_string_lossy()
-                .to_string(),
+        debug!(
+            "backup_start(id={}, options={:?})",
+            self.id, snapshot_options
         );
-        backend_options.repository = Some(
-            Settings::instance()
-                .remote
-                .clone()
-                .unwrap_or(backend_options.repository.clone().unwrap()),
-        );
-        let backends = backend_options
+        let settings = Settings::instance();
+        debug!("settings_lock");
+        let backends = BackendOptions::default()
+            .repo_hot(
+                MINESAVE_DATA_HOME
+                    .join(&self.id)
+                    .to_string_lossy()
+                    .to_string(),
+            )
+            .repository(
+                settings.remote.clone().unwrap_or(
+                    MINESAVE_DATA_HOME
+                        .join(&self.id)
+                        .to_string_lossy()
+                        .to_string(),
+                ),
+            )
             .to_backends()
             .inspect_err(report_err("Failed to init backend"))?;
         let mut repo_options = RepositoryOptions::default();
-        if repo_options.password.is_none() && repo_options.password_command.is_none() {
+        if settings.password.is_none() && settings.password_cmd.is_none() {
             warn!("Neither password nor password command is configured");
             native_dialog::MessageDialogBuilder::default()
                 .set_title(t!("set-password"))
@@ -88,8 +133,8 @@ impl SaveBackupConfiguration {
                 .alert();
             bail!("no password");
         }
-        repo_options.password = Settings::instance().password.clone();
-        repo_options.password_command = Settings::instance().password_cmd.as_ref().map(|s| {
+        repo_options.password = settings.password.clone();
+        repo_options.password_command = settings.password_cmd.as_ref().map(|s| {
             CommandInput::from(
                 s.clone()
                     .split(" ")
@@ -100,7 +145,7 @@ impl SaveBackupConfiguration {
         let key_options = KeyOptions::default();
         let config_options = ConfigOptions::default().set_compression(min(
             rustic_core::max_compression_level(),
-            Settings::instance().compression_level,
+            settings.compression_level,
         ));
         let repo = Repository::new(&repo_options, &backends)
             .inspect_err(report_err("Failed to create backup storage instance"))?;
@@ -132,14 +177,15 @@ impl SaveBackupConfiguration {
             )
             .inspect_err(report_err("Failed to create backup"))?,
         );
-        info!(
-            "backup(id={}, snapshot_id={:x})",
+        debug!(
+            "backup_finish(id={}, snapshot_id={:x}, option={:?})",
             self.id,
             self.last_snapshot
                 .as_ref()
                 .expect("This should never happen")
-                .uid
+                .uid,
+            snapshot_options
         );
-        Ok(())
+        Ok(()) // Settings released
     }
 }

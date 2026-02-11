@@ -5,6 +5,9 @@ placeholder: "正在开发中"
 pages:
   home:
     welcome: "欢迎来到MineSave"
+    saves-summary: "存档信息摘要"
+    saves-count: "存档数量"
+    quick-backup: "快速备份"
   settings:
     basic: "基础"
     compression-level: "压缩等级"

@@ -4,6 +4,9 @@ placeholder: "Developing"
 pages:
   home:
     welcome: "Welcome to MineSave"
+    saves-summary: "Saves Summary"
+    saves-count: "Saves Count"
+    quick-backup: "Backup"
   settings:
     basic: "Basic"
     compression-level: "Compression level"
