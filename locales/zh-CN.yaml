@@ -11,6 +11,8 @@ pages:
   saves: 
     backup: "备份"
     recover: "恢复"
+    label: "标题"
+    description: "描述"
   settings:
     basic: "基础"
     compression-level: "压缩等级"
@@ -23,6 +25,8 @@ pages:
     save: "保存"
 
 messages:
+  ok: "确定"
+  cancel: "取消"
   action-cancelled: "操作已取消"
   set-password: "请为备份设置密码"
   backup-failed: "备份已失败"

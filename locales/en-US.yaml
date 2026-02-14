@@ -23,6 +23,8 @@ pages:
     save: "Save"
   
 messages:
+  ok: "OK"
+  cancel: "Cancel"
   action-cancelled: "Action cancelled"
   set-password: "Please set a password for your backups"
   backup-failed: "Backup failed"

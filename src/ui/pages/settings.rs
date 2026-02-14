@@ -7,7 +7,10 @@ use std::{borrow::Cow, path::PathBuf};
 
 use crate::{
     settings::Settings,
-    ui::{pages::build_wrapper, utils::title},
+    ui::{
+        pages::build_wrapper,
+        utils::{title, with_label},
+    },
     utils::report_err,
 };
 
@@ -18,16 +21,16 @@ pub fn settings() -> Box {
         .label(&t!("pages.settings.save").to_string())
         .build();
 
-    let (b1, compression_level_input) = text_input(
+    let (b1, compression_level_input) = with_label::text_input(
         t!("pages.settings.compression-level"),
         Settings::instance().compression_level.to_string(),
     );
-    let (b2, pass_input_box) = text_input(
+    let (b2, pass_input_box) = with_label::text_input(
         t!("pages.settings.password"),
         Settings::instance().password.clone().unwrap_or_default(),
     );
     pass_input_box.set_visibility(false);
-    let (b3, pass_cmd_input_box) = text_input(
+    let (b3, pass_cmd_input_box) = with_label::text_input(
         t!("pages.settings.password-command"),
         Settings::instance()
             .password_cmd
@@ -35,7 +38,8 @@ pub fn settings() -> Box {
             .unwrap_or_default(),
     );
 
-    let (b4, sync_switch) = switch(t!("pages.settings.sync"), Settings::instance().sync);
+    let (b4, sync_switch) =
+        with_label::switch(t!("pages.settings.sync"), Settings::instance().sync);
 
     let scan_root_input: TextView = TextView::builder().build();
     let scan_root_input_buffer0 = scan_root_input.buffer();
@@ -157,38 +161,4 @@ pub fn settings() -> Box {
     });
     wrapper.append(&save_button);
     wrapper
-}
-
-fn text_input(label: Cow<str>, init_state: String) -> (Box, Entry) {
-    let b: Box = Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
-        .spacing(8)
-        .build();
-    b.append(
-        &Label::builder()
-            .label(&label.to_string())
-            .width_chars(16)
-            .xalign(0.0)
-            .build(),
-    );
-    let entry = Entry::builder().text(init_state).width_chars(48).build();
-    b.append(&entry);
-    (b, entry)
-}
-
-fn switch(label: Cow<str>, init_state: bool) -> (Box, Switch) {
-    let b: Box = Box::builder()
-        .orientation(gtk4::Orientation::Horizontal)
-        .spacing(8)
-        .build();
-    b.append(
-        &Label::builder()
-            .label(&label.to_string())
-            .width_chars(16)
-            .xalign(0.0)
-            .build(),
-    );
-    let switch = Switch::builder().state(init_state).build();
-    b.append(&switch);
-    (b, switch)
 }

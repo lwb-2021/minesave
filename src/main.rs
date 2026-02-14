@@ -35,6 +35,11 @@ pub static MINESAVE_DATA_HOME: LazyLock<PathBuf> = LazyLock::new(|| {
 
 fn main() {
     env_logger::builder()
+        .filter_level(if cfg!(debug_assertions) {
+            log::LevelFilter::Debug
+        } else {
+            log::LevelFilter::Warn
+        })
         .target(Target::Stderr)
         .target({
             if let Ok(log) = File::create(MINESAVE_DATA_HOME.join("log"))
