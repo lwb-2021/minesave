@@ -8,6 +8,9 @@ pages:
     saves-summary: "存档信息摘要"
     saves-count: "存档数量"
     quick-backup: "快速备份"
+  saves: 
+    backup: "备份"
+    recover: "恢复"
   settings:
     basic: "基础"
     compression-level: "压缩等级"

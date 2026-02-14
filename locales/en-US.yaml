@@ -7,6 +7,10 @@ pages:
     saves-summary: "Saves Summary"
     saves-count: "Saves Count"
     quick-backup: "Backup"
+  saves:
+    backup: "Backup"
+    recover: "Recover"
+    
   settings:
     basic: "Basic"
     compression-level: "Compression level"
@@ -17,7 +21,7 @@ pages:
     add-scan-root: "Add scan root"
     sync: "Sync"
     save: "Save"
-    
+  
 messages:
   action-cancelled: "Action cancelled"
   set-password: "Please set a password for your backups"
