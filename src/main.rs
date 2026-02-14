@@ -11,6 +11,7 @@ use crate::{backup::AppState, utils::report_err};
 
 mod backup;
 mod settings;
+mod tasks;
 mod ui;
 mod utils;
 
@@ -53,6 +54,7 @@ fn main() {
     });
 
     AppState::instance().save().unwrap_or_default();
+    tasks::wait_all();
 
-    res.unwrap()
+    res.unwrap();
 }

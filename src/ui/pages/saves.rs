@@ -49,9 +49,7 @@ pub fn saves() -> Box {
         let recover_button = Button::with_label(&t!("pages.saves.recover").to_string());
 
         // TODO
-        let save_instance_for_backup = save.clone();
         backup_button.connect_clicked(|_| {});
-        let save_instance_for_recover = save.clone();
         recover_button.connect_clicked(|_| {});
 
         button_box.append(&Label::builder().hexpand(true).build());
