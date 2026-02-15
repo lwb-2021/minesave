@@ -5,6 +5,9 @@ use gtk4::{
 use native_dialog::DialogBuilder;
 use std::path::PathBuf;
 
+#[cfg(target_os = "windows")]
+use std::io::Write;
+
 use crate::{
     settings::Settings,
     ui::{
@@ -43,7 +46,7 @@ pub fn settings() -> Box {
             .unwrap_or_default(),
     );
 
-    let (b5, sync_switch) =
+    let (b6, sync_switch) =
         with_label::switch(t!("pages.settings.sync"), Settings::instance().sync);
 
     let scan_root_input: TextView = TextView::builder().build();
@@ -91,11 +94,55 @@ pub fn settings() -> Box {
         }
     });
 
+    let enable_auto_backup_button = Button::builder()
+        .halign(gtk4::Align::Start)
+        .label(&t!("pages.settings.enable-auto-backup").to_string())
+        .build();
+
+    #[cfg(target_os = "windows")]
+    enable_auto_backup_button.connect_clicked(|_| {
+        match std::fs::File::create(
+            dirs::data_dir()
+                .unwrap()
+                .join("Microsoft")
+                .join("Windows")
+                .join("StartMenu")
+                .join("Programs")
+                .join("Startup")
+                .join("MineSaveAutoBackup.bat"),
+        ) {
+            Ok(mut file) => {
+                if let Err(err) =
+                    write!(&mut file, "@start /b {}", std::env::args().nth(0).unwrap())
+                {
+                    native_dialog::MessageDialogBuilder::default()
+                        .set_text(format!("Failed to enable auto backup: {}", err))
+                        .alert()
+                        .show();
+                }
+            }
+            Err(err) => {
+                native_dialog::MessageDialogBuilder::default()
+                    .set_text(format!("Failed to enable auto backup: {}", err))
+                    .alert()
+                    .show();
+            }
+        }
+    });
+    #[cfg(target_os = "linux")]
+    enable_auto_backup_button.connect_clicked(|_| {
+        native_dialog::MessageDialogBuilder::default()
+            .set_text(t!("messages.enable-auto-backup-for-linux"))
+            .alert()
+            .show();
+    });
+
     wrapper.append(&title(t!("pages.settings.basic")));
     wrapper.append(&b1);
     wrapper.append(&b2);
     wrapper.append(&b3);
     wrapper.append(&b4);
+    wrapper.append(&enable_auto_backup_button);
     wrapper.append(
         &Label::builder()
             .halign(gtk4::Align::Start)
@@ -107,8 +154,10 @@ pub fn settings() -> Box {
 
     wrapper.append(&add_scan_root_button);
 
+    wrapper.append(&title(t!("pages.settings.advanced")));
+
     wrapper.append(&title(t!("pages.settings.experimental")));
-    wrapper.append(&b5);
+    wrapper.append(&b6);
 
     save_button.connect_clicked(move |_| {
         let mut instance = Settings::instance();

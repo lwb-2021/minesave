@@ -14,13 +14,16 @@ pages:
   settings:
     basic: "Basic"
     compression-level: "Compression level"
-    experimental: "Experimental"
+    enable-auto-backup: "Enable auto backup"
     daemon-backup-duration: "Backup duration(secs)"
     password: "Password"
     password-command: "Password command"
     scan-root: "Scan root"
     add-scan-root: "Add scan root"
+    advanced: "Advanced"
+    experimental: "Experimental"
     sync: "Sync"
+    remote: "Remote"
     save: "Save"
   
 messages:
@@ -32,3 +35,5 @@ messages:
   failed-check: "Check failed"
   cannot-enable-together: "'%{a}' and '%{b}' cannot be enabled together"
   int-wanted: "%{entry} should be an integer"
+
+  enable-auto-backup-for-linux: "Auto backup on linux must be set up manually. Execute the following command on startup: minesave daemon"

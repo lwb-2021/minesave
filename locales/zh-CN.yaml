@@ -18,15 +18,17 @@ pages:
   settings:
     basic: "基础"
     compression-level: "压缩等级"
-    experimental: "实验性"
+    enable-auto-backup: "启用自动备份"
     daemon-backup-duration: "备份间隔(秒)"
     password: "密码"
     password-command: "获取密码的命令"
     scan-root: "扫描路径(一行一个)"
     add-scan-root: "增加扫描路径"
+    advanced: "高级"
+    experimental: "实验性"
     sync: "同步"
+    remote: "云存储配置"
     save: "保存"
-
 messages:
   ok: "确定"
   cancel: "取消"
@@ -36,6 +38,8 @@ messages:
   failed-check: "校验失败"
   cannot-enable-together: "%{a} 和 %{b} 不能同时启用"
   int-wanted: "%{entry} 必须为整数"
+
+  enable-auto-backup-for-linux: "你是一个成熟的Linux用户了，应该学会自己设置自启动。开机时执行以下命令：minesave daemon"
   
   
     
