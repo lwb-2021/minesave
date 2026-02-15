@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     cmp::min,
     collections::{HashMap, HashSet},
+    ffi::OsString,
     fs::{self, File},
     hash::{DefaultHasher, Hash, Hasher},
     path::{Path, PathBuf},
@@ -52,6 +53,7 @@ impl AppState {
                         .inspect_err(report_err("Error when visiting dir "))
                         .is_ok_and(|x| x)
                 })
+                .filter(|x| x.path().extension() != Some(&OsString::from("recover")))
                 .map(|x| x.into_path())
                 .collect();
             let add: Vec<PathBuf> = save_dirs.difference(&self.save_dirs).cloned().collect();
