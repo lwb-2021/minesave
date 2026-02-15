@@ -2,6 +2,8 @@ _version: 1
 
 placeholder: "正在开发中"
 
+auto-backup: "自动备份"
+
 pages:
   home:
     welcome: "欢迎来到MineSave"
@@ -17,6 +19,7 @@ pages:
     basic: "基础"
     compression-level: "压缩等级"
     experimental: "实验性"
+    daemon-backup-duration: "备份间隔(秒)"
     password: "密码"
     password-command: "获取密码的命令"
     scan-root: "扫描路径(一行一个)"

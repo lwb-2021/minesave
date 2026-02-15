@@ -23,6 +23,11 @@ const fn default_compression_level() -> i32 {
     6
 }
 
+#[inline]
+const fn daemon_backup_duration() -> u32 {
+    3600
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 
@@ -30,6 +35,8 @@ pub struct Settings {
     pub language: String,
     #[serde(default = "default_compression_level")]
     pub compression_level: i32,
+    #[serde(default = "daemon_backup_duration")]
+    pub daemon_backup_duration: u32,
     pub scan_root: Vec<PathBuf>,
     pub sync: bool,
     pub remote: Option<String>,

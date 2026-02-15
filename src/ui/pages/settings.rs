@@ -25,12 +25,17 @@ pub fn settings() -> Box {
         t!("pages.settings.compression-level"),
         Settings::instance().compression_level.to_string(),
     );
-    let (b2, pass_input_box) = with_label::text_input(
+    let (b2, daemon_backup_duration_input_box) = with_label::text_input(
+        t!("pages.settings.daemon-backup-duration"),
+        Settings::instance().daemon_backup_duration.to_string(),
+    );
+    let (b3, pass_input_box) = with_label::text_input(
         t!("pages.settings.password"),
         Settings::instance().password.clone().unwrap_or_default(),
     );
+
     pass_input_box.set_visibility(false);
-    let (b3, pass_cmd_input_box) = with_label::text_input(
+    let (b4, pass_cmd_input_box) = with_label::text_input(
         t!("pages.settings.password-command"),
         Settings::instance()
             .password_cmd
@@ -38,7 +43,7 @@ pub fn settings() -> Box {
             .unwrap_or_default(),
     );
 
-    let (b4, sync_switch) =
+    let (b5, sync_switch) =
         with_label::switch(t!("pages.settings.sync"), Settings::instance().sync);
 
     let scan_root_input: TextView = TextView::builder().build();
@@ -90,6 +95,7 @@ pub fn settings() -> Box {
     wrapper.append(&b1);
     wrapper.append(&b2);
     wrapper.append(&b3);
+    wrapper.append(&b4);
     wrapper.append(
         &Label::builder()
             .halign(gtk4::Align::Start)
@@ -102,7 +108,7 @@ pub fn settings() -> Box {
     wrapper.append(&add_scan_root_button);
 
     wrapper.append(&title(t!("pages.settings.experimental")));
-    wrapper.append(&b4);
+    wrapper.append(&b5);
 
     save_button.connect_clicked(move |_| {
         let mut instance = Settings::instance();
@@ -115,6 +121,17 @@ pub fn settings() -> Box {
                 .set_text(t!(
                     "message.int-wanted",
                     entry = t!("pages.settings.compression-level")
+                ))
+                .alert();
+        }
+        if let Ok(duration) = daemon_backup_duration_input_box.text().parse() {
+            instance.daemon_backup_duration = duration
+        } else {
+            DialogBuilder::message()
+                .set_title(t!("message.failed-heck"))
+                .set_text(t!(
+                    "message.int-wanted",
+                    entry = t!("pages.settings.daemon-backup-duration")
                 ))
                 .alert();
         }
@@ -159,6 +176,7 @@ pub fn settings() -> Box {
         instance.sync = sync_switch.state();
         instance.save();
     });
+
     wrapper.append(&save_button);
     wrapper
 }
