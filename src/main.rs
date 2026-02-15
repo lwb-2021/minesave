@@ -3,7 +3,13 @@ extern crate rust_i18n;
 #[macro_use]
 extern crate log;
 
-use std::{fs::File, io::Sink, panic, path::PathBuf, sync::LazyLock};
+use std::{
+    fs::{File, OpenOptions},
+    io::Sink,
+    panic,
+    path::PathBuf,
+    sync::LazyLock,
+};
 
 use env_logger::Target;
 
@@ -40,9 +46,12 @@ fn main() {
         } else {
             log::LevelFilter::Warn
         })
-        .target(Target::Stderr)
+        .target(Target::Stdout)
         .target({
-            if let Ok(log) = File::create(MINESAVE_DATA_HOME.join("log"))
+            if let Ok(log) = OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(MINESAVE_DATA_HOME.join("log"))
                 .inspect_err(report_err("Failed to open log file"))
             {
                 Target::Pipe(Box::new(log))
