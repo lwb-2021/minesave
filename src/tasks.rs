@@ -5,7 +5,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use crate::{backup::AppState, tasks, utils::report_err};
+use crate::backup::AppState;
 
 static TASKS: Mutex<Vec<Task>> = Mutex::new(vec![]);
 

@@ -1,9 +1,9 @@
 use gtk4::{
-    Box, Button, Entry, Label, Switch, TextView,
+    Box, Button, Label, TextView,
     prelude::{BoxExt, ButtonExt, EditableExt, EntryExt, TextBufferExt, TextViewExt},
 };
 use native_dialog::DialogBuilder;
-use std::{borrow::Cow, path::PathBuf};
+use std::path::PathBuf;
 
 use crate::{
     settings::Settings,

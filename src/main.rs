@@ -4,7 +4,7 @@ extern crate rust_i18n;
 extern crate log;
 
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::Sink,
     panic,
     path::PathBuf,

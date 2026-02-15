@@ -158,7 +158,7 @@ pub fn saves() -> Box {
     wrapper
 }
 
-fn build_button_from_snapshot(snapshot: &SnapshotFile) -> Button {
+fn build_button_from_snapshot(_snapshot: &SnapshotFile) -> Button {
     let btn = Button::builder().build();
     btn
 }

@@ -2,7 +2,6 @@ use gtk4::{
     Box, Button, GridLayout, Label, Orientation,
     prelude::{BoxExt, ButtonExt},
 };
-use native_dialog::DialogBuilder;
 use rustic_core::SnapshotOptions;
 
 use crate::{
@@ -28,7 +27,7 @@ pub fn home() -> Box {
     cards.append(&cardify({
         let backup_button = Button::with_label(&t!("pages.home.quick-backup").to_string());
         backup_button.connect_clicked(|_| {
-            for save in AppState::instance().saves.values_mut() {
+            for _save in AppState::instance().saves.values_mut() {
                 // if let Err(err) = save.run_backup(
                 //     SnapshotOptions::default().label(t!("pages.home.quick-backup").to_string()),
                 // ) {

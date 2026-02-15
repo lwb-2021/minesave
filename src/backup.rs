@@ -1,5 +1,5 @@
 use crate::{MINESAVE_DATA_HOME, settings::Settings, utils::report_err};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Result, bail};
 use rustic_backend::BackendOptions;
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalDestination, LsOptions, PathList,
@@ -133,7 +133,7 @@ impl SaveBackupConfiguration {
                 .expect("Character in path is not UTF-8"),
         )
         .inspect_err(report_err("Failed to parse source path"))?;
-        let file = repo
+        let _file = repo
             .backup(
                 &backup_options,
                 &source,
