@@ -6,12 +6,11 @@ extern crate log;
 use std::{
     fs::OpenOptions,
     io::Sink,
-    os::unix::thread,
     panic,
     path::PathBuf,
     sync::LazyLock,
     thread::{self, sleep},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 use clap::Parser;
@@ -53,9 +52,7 @@ fn main() {
         AppState::instance().reload();
         let cli = cli::Cli::parse();
         if let None = cli.command {
-            let daemon = std::thread::spawn(daemon);
             ui::run_app();
-            daemon.join().unwrap();
         } else {
             match cli.command.unwrap() {
                 cli::Command::Daemon => daemon(),
@@ -95,6 +92,13 @@ fn setup_logger() {
 
 fn daemon() {
     loop {
+        sleep(Duration::from_secs(30));
+        if SystemTime::now().elapsed().unwrap().as_secs()
+            % (Settings::instance().daemon_backup_duration as u64)
+            > 30
+        {
+            continue;
+        }
         tasks::spawn(
             t!("auto-backup").to_string(),
             tasks::TaskInfo::Backup {
@@ -103,8 +107,5 @@ fn daemon() {
             },
         );
         tasks::wait_all();
-        sleep(Duration::from_secs(
-            Settings::instance().daemon_backup_duration as u64,
-        ));
     }
 }
