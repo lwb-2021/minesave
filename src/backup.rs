@@ -1,9 +1,9 @@
 use crate::{MINESAVE_DATA_HOME, settings::Settings, utils::report_err};
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use rustic_backend::BackendOptions;
 use rustic_core::{
-    BackupOptions, CommandInput, ConfigOptions, KeyOptions, PathList, Repository,
-    RepositoryOptions, SnapshotOptions, repofile::SnapshotFile,
+    BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalDestination, LsOptions, PathList,
+    Repository, RepositoryOptions, RestoreOptions, SnapshotOptions, repofile::SnapshotFile,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -94,14 +94,12 @@ impl AppState {
         Ok(())
     }
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SaveBackupConfiguration {
     id: String,
     pub name: String,
     init: bool,
     source: PathBuf,
-    #[serde(default)]
-    last_snapshot: Option<SnapshotFile>,
 }
 impl SaveBackupConfiguration {
     pub fn new<P: AsRef<Path>>(source: P) -> Self {
@@ -117,7 +115,6 @@ impl SaveBackupConfiguration {
                 .to_string(),
             init: false,
             source: source.as_ref().to_path_buf(),
-            last_snapshot: None,
         }
     }
     pub fn run_backup(&mut self, snapshot_options: SnapshotOptions) -> Result<()> {
@@ -125,8 +122,87 @@ impl SaveBackupConfiguration {
             "backup_start(id={}, options={:?})",
             self.id, snapshot_options
         );
-        let settings = Settings::instance();
-        debug!("settings_lock");
+        let repo = self.open_repo()?;
+        self.init = true;
+        let backup_options = BackupOptions::default();
+        let source = PathList::from_string(
+            self.source
+                .to_str()
+                .expect("Character in path is not UTF-8"),
+        )
+        .inspect_err(report_err("Failed to parse source path"))?;
+        let file = repo
+            .backup(
+                &backup_options,
+                &source,
+                snapshot_options
+                    .to_snapshot()
+                    .inspect_err(report_err("Bad snapshot options"))?,
+            )
+            .inspect_err(report_err("Failed to create backup"))?;
+
+        debug!(
+            "backup_finish(id={}, option={:?})",
+            self.id, snapshot_options
+        );
+        Ok(())
+    }
+
+    pub fn list_backups(&self) -> Result<Vec<SnapshotFile>> {
+        if !self.init {
+            warn!("Repo is not initalized");
+            return Ok(vec![]);
+        }
+        let repo = self.open_repo()?;
+        Ok(repo
+            .get_all_snapshots()
+            .inspect_err(report_err("Failed to list snapshots"))?)
+    }
+
+    pub fn recover(&self, snapshot: SnapshotFile) -> Result<()> {
+        let repo = self
+            .open_repo()?
+            .to_indexed()
+            .inspect_err(report_err("Failed to index repo fully"))?;
+
+        let opts = RestoreOptions::default();
+        let dest = LocalDestination::new(
+            &self
+                .source
+                .with_added_extension("recover")
+                .to_str()
+                .expect("Not a vaild UTF-8"),
+            true,
+            false,
+        )
+        .inspect_err(report_err("Failed to create destination"))?;
+
+        let node = repo
+            .node_from_path(snapshot.tree, &self.source)
+            .inspect_err(report_err("Failed to find node from backup storage"))?;
+        let ls_opts = LsOptions::default();
+        let node_streamer = repo
+            .ls(&node, &ls_opts)
+            .inspect_err(report_err("Failed to open node_streamer"))?;
+
+        let restore_infos = repo
+            .prepare_restore(&opts, node_streamer.clone(), &dest, false)
+            .inspect_err(report_err("Failed to prepare recovery"))?;
+
+        repo.restore(restore_infos, &opts, node_streamer, &dest)?;
+
+        Ok(())
+    }
+
+    fn open_repo(
+        &self,
+    ) -> Result<
+        Repository<
+            rustic_core::NoProgressBars,
+            rustic_core::IndexedStatus<rustic_core::IdIndex, rustic_core::OpenStatus>,
+        >,
+    > {
+        let settings = { Settings::instance().clone() };
         let backends = BackendOptions::default()
             .repo_hot(
                 MINESAVE_DATA_HOME
@@ -182,33 +258,6 @@ impl SaveBackupConfiguration {
         let repo = repo
             .to_indexed_ids()
             .inspect_err(report_err("Failed to index repo"))?;
-        let backup_options = BackupOptions::default();
-        let source = PathList::from_string(
-            self.source
-                .to_str()
-                .expect("Character in path is not UTF-8"),
-        )
-        .inspect_err(report_err("Failed to parse source path"))?;
-        self.last_snapshot = Some(
-            repo.backup(
-                &backup_options,
-                &source,
-                snapshot_options
-                    .to_snapshot()
-                    .inspect_err(report_err("Bad snapshot options"))?,
-            )
-            .inspect_err(report_err("Failed to create backup"))?,
-        );
-
-        debug!(
-            "backup_finish(id={}, snapshot_id={:x}, option={:?})",
-            self.id,
-            self.last_snapshot
-                .as_ref()
-                .expect("This should never happen")
-                .uid,
-            snapshot_options
-        );
-        Ok(()) // Settings released
+        Ok(repo)
     }
 }

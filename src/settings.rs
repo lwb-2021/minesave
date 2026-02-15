@@ -23,7 +23,7 @@ const fn default_compression_level() -> i32 {
     6
 }
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 
 pub struct Settings {

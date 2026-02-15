@@ -1,15 +1,20 @@
 use anyhow::{Result, anyhow};
-use rustic_core::SnapshotOptions;
+use rustic_core::{SnapshotOptions, repofile::SnapshotFile};
 use std::{
     sync::Mutex,
     thread::{self, JoinHandle},
 };
 
-use crate::{backup::AppState, tasks};
+use crate::{backup::AppState, tasks, utils::report_err};
 
 static TASKS: Mutex<Vec<Task>> = Mutex::new(vec![]);
 
 pub fn spawn(name: String, task_info: TaskInfo) {
+    debug!(
+        "task_spawn(id={}, name={})",
+        TASKS.lock().expect("Unable to lock TASKS").len(),
+        name
+    );
     let worker = match task_info.clone() {
         TaskInfo::Backup { for_id, options } => thread::spawn(move || {
             if let Some(id) = for_id {
@@ -25,6 +30,11 @@ pub fn spawn(name: String, task_info: TaskInfo) {
                 drop(instance);
             }
             AppState::instance().save()
+        }),
+        TaskInfo::Recover { id, snapshot } => thread::spawn(move || {
+            let instance = AppState::instance();
+            instance.saves[&id].recover(snapshot)?;
+            Ok(())
         }),
     };
     TASKS.lock().expect("Unable to lock TASKS").push(Task {
@@ -60,5 +70,9 @@ pub enum TaskInfo {
     Backup {
         for_id: Option<String>,
         options: SnapshotOptions,
+    },
+    Recover {
+        id: String,
+        snapshot: SnapshotFile,
     },
 }
