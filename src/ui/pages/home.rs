@@ -27,25 +27,14 @@ pub fn home() -> Box {
     cards.append(&cardify({
         let backup_button = Button::with_label(&t!("pages.home.quick-backup").to_string());
         backup_button.connect_clicked(|_| {
-            for _save in AppState::instance().saves.values_mut() {
-                // if let Err(err) = save.run_backup(
-                //     SnapshotOptions::default().label(t!("pages.home.quick-backup").to_string()),
-                // ) {
-                //     debug!("backup_failed");
-                //     DialogBuilder::message()
-                //         .set_title(t!("messages.backup-failed"))
-                //         .set_text(format!("{}: {}", t!("messages.backup-failed"), err))
-                //         .alert();
-                // }
-                tasks::spawn(
-                    t!("pages.home.quick-backup").to_string(),
-                    TaskInfo::Backup {
-                        for_id: None,
-                        options: SnapshotOptions::default()
-                            .label(t!("pages.home.quick-backup").to_string()),
-                    },
-                );
-            }
+            tasks::spawn(
+                t!("pages.home.quick-backup").to_string(),
+                TaskInfo::Backup {
+                    for_id: None,
+                    options: SnapshotOptions::default()
+                        .label(t!("pages.home.quick-backup").to_string()),
+                },
+            );
             AppState::instance().save().unwrap_or_default();
         });
 
