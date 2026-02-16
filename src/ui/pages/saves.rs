@@ -137,8 +137,19 @@ pub fn saves() -> Box {
                 spinner.stop();
                 if let Some(data) = data.lock().unwrap().as_ref() {
                     for snapshot in data {
-                        let snapshot_card = Box::builder().build();
+                        let snapshot_card = Box::builder()
+                            .orientation(gtk4::Orientation::Vertical)
+                            .valign(gtk4::Align::Start)
+                            .build();
+
                         snapshot_card.append(&title(snapshot.label.clone()));
+                        snapshot_card.append(
+                            &Label::builder()
+                                .label(snapshot.time.format("%Y/%m/%d %H:%m").to_string())
+                                .xalign(0.0)
+                                .build(),
+                        );
+
                         let btn = Button::builder().child(&snapshot_card).build();
 
                         let id = id.clone();

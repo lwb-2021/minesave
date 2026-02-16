@@ -125,7 +125,8 @@ pub fn settings() -> Box {
                 native_dialog::MessageDialogBuilder::default()
                     .set_text(format!("Failed to enable auto backup: {}", err))
                     .alert()
-                    .show();
+                    .show()
+                    .unwrap_or_default();
             }
         }
     });
@@ -134,7 +135,8 @@ pub fn settings() -> Box {
         native_dialog::MessageDialogBuilder::default()
             .set_text(t!("messages.enable-auto-backup-for-linux"))
             .alert()
-            .show();
+            .show()
+            .unwrap_or_default();
     });
 
     wrapper.append(&title(t!("pages.settings.basic")));
