@@ -3,7 +3,8 @@ use anyhow::{Result, bail};
 use rustic_backend::BackendOptions;
 use rustic_core::{
     BackupOptions, CommandInput, ConfigOptions, KeyOptions, LocalDestination, LsOptions, PathList,
-    Repository, RepositoryOptions, RestoreOptions, SnapshotOptions, repofile::SnapshotFile,
+    PruneOptions, Repository, RepositoryOptions, RestoreOptions, SnapshotOptions,
+    repofile::{SnapshotFile, SnapshotId},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -126,6 +127,7 @@ impl SaveBackupConfiguration {
         );
         let repo = self.open_repo()?;
         self.init = true;
+
         let backup_options = BackupOptions::default();
         let source = PathList::from_string(
             self.source
@@ -147,6 +149,33 @@ impl SaveBackupConfiguration {
             "backup_finish(id={}, option={:?})",
             self.id, snapshot_options
         );
+
+        let keep = Settings::instance().snapshot_keep;
+        if keep <= 0 {
+            return Ok(());
+        }
+        let keep = keep as usize;
+        let mut snapshots = self
+            .list_backups()
+            .inspect_err(report_err("Failed to get snapshot list"))?;
+        snapshots.sort_by(|a, b| a.time.cmp(&b.time));
+        if snapshots.len() <= keep {
+            return Ok(());
+        }
+        debug!("clean(keep={})", keep);
+        let deleted: Vec<SnapshotId> = snapshots
+            .iter()
+            .take(snapshots.len() - keep)
+            .map(|s| s.id)
+            .collect();
+        debug!("delete_snapshots(amount={})", deleted.len());
+        let prune_options = PruneOptions::default().repack_uncompressed(true);
+        let prune_plan = repo
+            .prune_plan(&prune_options)
+            .inspect_err(report_err("Failed to prune"))?;
+        repo.prune(&prune_options, prune_plan)
+            .inspect_err(report_err("Failed to prune"))?;
+
         Ok(())
     }
 

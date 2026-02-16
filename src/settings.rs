@@ -28,6 +28,11 @@ const fn daemon_backup_duration() -> u32 {
     3600
 }
 
+#[inline]
+const fn snapshot_keep() -> i32 {
+    -1
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
 
@@ -35,6 +40,8 @@ pub struct Settings {
     pub language: String,
     #[serde(default = "default_compression_level")]
     pub compression_level: i32,
+    #[serde(default = "snapshot_keep")]
+    pub snapshot_keep: i32,
     #[serde(default = "daemon_backup_duration")]
     pub daemon_backup_duration: u32,
     pub scan_root: Vec<PathBuf>,

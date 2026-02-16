@@ -16,6 +16,7 @@ pages:
     compression-level: "Compression level"
     enable-auto-backup: "Enable auto backup"
     daemon-backup-duration: "Backup duration(secs)"
+    snapshot-keep: "Kept Snapshots"
     password: "Password"
     password-command: "Password command"
     scan-root: "Scan root"

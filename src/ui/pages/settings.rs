@@ -32,13 +32,17 @@ pub fn settings() -> Box {
         t!("pages.settings.daemon-backup-duration"),
         Settings::instance().daemon_backup_duration.to_string(),
     );
-    let (b3, pass_input_box) = with_label::text_input(
+    let (b3, snapshot_keep_input_box) = with_label::text_input(
+        t!("pages.settings.snapshot-keep"),
+        Settings::instance().snapshot_keep.to_string(),
+    );
+    let (b4, pass_input_box) = with_label::text_input(
         t!("pages.settings.password"),
         Settings::instance().password.clone().unwrap_or_default(),
     );
 
     pass_input_box.set_visibility(false);
-    let (b4, pass_cmd_input_box) = with_label::text_input(
+    let (b5, pass_cmd_input_box) = with_label::text_input(
         t!("pages.settings.password-command"),
         Settings::instance()
             .password_cmd
@@ -144,6 +148,7 @@ pub fn settings() -> Box {
     wrapper.append(&b2);
     wrapper.append(&b3);
     wrapper.append(&b4);
+    wrapper.append(&b5);
     wrapper.append(&enable_auto_backup_button);
     wrapper.append(
         &Label::builder()
@@ -177,6 +182,17 @@ pub fn settings() -> Box {
         }
         if let Ok(duration) = daemon_backup_duration_input_box.text().parse() {
             instance.daemon_backup_duration = duration
+        } else {
+            DialogBuilder::message()
+                .set_title(t!("message.failed-heck"))
+                .set_text(t!(
+                    "message.int-wanted",
+                    entry = t!("pages.settings.daemon-backup-duration")
+                ))
+                .alert();
+        }
+        if let Ok(snapshot_keep) = snapshot_keep_input_box.text().parse() {
+            instance.snapshot_keep = snapshot_keep;
         } else {
             DialogBuilder::message()
                 .set_title(t!("message.failed-heck"))

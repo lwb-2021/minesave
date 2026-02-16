@@ -20,6 +20,7 @@ pages:
     compression-level: "压缩等级"
     enable-auto-backup: "启用自动备份"
     daemon-backup-duration: "备份间隔(秒)"
+    snapshot-keep: "保存的备份数量"
     password: "密码"
     password-command: "获取密码的命令"
     scan-root: "扫描路径(一行一个)"
